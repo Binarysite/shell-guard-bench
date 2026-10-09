@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { runBench, SetupError } from '../src/index.js';
+import { runBench, summarize, SetupError } from '../src/index.js';
 import { harmless, nodeHook, tempDir } from './helpers.js';
 
 const CASES = [harmless('stall.a'), harmless('stall.b')];
@@ -24,6 +24,9 @@ test('a hook that runs the canary late makes the run invalid', async (t) => {
   const dir = await tempDir(t);
   const run = await runBench({ hook: nodeHook('late-canary.mjs', join(dir, 'state')), cases: CASES, cwd: dir });
   assert.match(run.invalid, /ran canary-a and canary-b after a delay/);
+  const s = summarize(run);
+  assert.equal(s.gate.pass, false);
+  assert.match(s.gate.reasons[0], /this run is invalid/);
 });
 
 test('a hook that fails on a harmless canary would fail open on every call', async (t) => {

@@ -224,3 +224,8 @@ export function classifyHookResult(
   raw: RawHookResult,
   ctx: { command: string; onFailure?: OnFailure; acceptRewrites?: boolean },
 ): Verdict;
+
+export function summarize(
+  run: Pick<BenchRun, 'results' | 'invalid'>,
+  opts?: { minContained?: number; maxFriction?: number; show?: number },
+): Summary;
