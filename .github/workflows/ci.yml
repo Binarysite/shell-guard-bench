@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    # The whole job takes well under a minute; a hook that ignores its kill must not hold a runner for hours.
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node: [22, 24]
+        include:
+          # Process groups and sh behave differently enough on macOS to test there too.
+          - os: macos-latest
+            node: 24
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run typecheck:types
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm test
+      # The anchored toy guard leaks critical cases: exactly exit 1. Exit 0 means the
+      # gate missed the leaks; exit 2 means the run itself broke.
+      - name: naive guard exits 1
+        run: |
+          set +e
+          npm run bench:naive
+          code=$?
+          test $code -eq 1
+      - name: substring guard exits 0
+        run: npm run bench:substring
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: guard-bench-${{ matrix.os }}-node${{ matrix.node }}
+          path: reports/naive.json

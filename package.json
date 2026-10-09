@@ -1,0 +1,65 @@
+{
+  "name": "shell-guard-bench",
+  "version": "0.0.0",
+  "description": "Bench for Claude Code PreToolUse guards: dangerous, evasive and harmless shell commands, none executed. Shows what a guard blocks, what slips through and what it blocks by mistake.",
+  "type": "module",
+  "private": true,
+  "main": "src/index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "bin": {
+    "guard-bench": "bin/guard-bench.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "corpus",
+    "index.d.ts",
+    "examples",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "lint": "node scripts/lint.mjs",
+    "typecheck": "tsc --noEmit --allowJs --checkJs",
+    "typecheck:types": "tsc --strict --noEmit --ignoreConfig index.d.ts",
+    "example": "node scripts/example.mjs",
+    "bench:naive": "node bin/guard-bench.js --hook \"node examples/guards/anchored-regex.mjs\" --out reports/naive.json",
+    "bench:substring": "node bin/guard-bench.js --hook \"node examples/guards/substring.mjs\" --out reports/substring.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "claude-code",
+    "claude-code-hooks",
+    "coding-agents",
+    "ai-agents",
+    "agent-safety",
+    "guardrails",
+    "security",
+    "benchmark",
+    "shell",
+    "cli"
+  ],
+  "author": "Alfredo Rosadilla",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Binarysite/shell-guard-bench.git"
+  },
+  "homepage": "https://github.com/Binarysite/shell-guard-bench#readme",
+  "bugs": {
+    "url": "https://github.com/Binarysite/shell-guard-bench/issues"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2"
+  }
+}
