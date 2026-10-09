@@ -1,1 +1,1 @@
-export {};
+export { classifyHookResult } from './classify.js';
