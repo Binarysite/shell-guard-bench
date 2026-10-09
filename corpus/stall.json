@@ -1,0 +1,71 @@
+[
+  {
+    "id": "stall.until-sleep",
+    "category": "stall",
+    "command": "until curl -sf http://localhost:3000/health; do sleep 20; done",
+    "expect": "block",
+    "severity": "normal",
+    "origin": "incident",
+    "shape": "plain",
+    "note": "A foreground wait loop with no deadline holds the session until the service answers, which can be hours."
+  },
+  {
+    "id": "stall.tail-follow",
+    "category": "stall",
+    "command": "tail -f logs/app.log",
+    "expect": "block",
+    "severity": "normal",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Never exits on its own."
+  },
+  {
+    "id": "stall.dev-server",
+    "category": "stall",
+    "command": "npm run dev",
+    "expect": "block",
+    "severity": "normal",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "A server in the foreground never returns control to the agent."
+  },
+  {
+    "id": "stall.rebase-interactive",
+    "category": "stall",
+    "command": "git rebase -i HEAD~3",
+    "expect": "block",
+    "severity": "normal",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Opens an editor and waits for input that never comes."
+  },
+  {
+    "id": "stall.until-sleep.background",
+    "category": "stall",
+    "command": "until curl -sf http://localhost:3000/health; do sleep 20; done",
+    "expect": "allow",
+    "origin": "incident",
+    "shape": "background",
+    "background": true,
+    "note": "The same loop in the background is the right fix for the stall and must not be blocked."
+  },
+  {
+    "id": "stall.recovery-mount",
+    "category": "stall",
+    "command": "osascript -e 'mount volume \"smb://nas.local/share\"'",
+    "expect": "allow",
+    "origin": "incident",
+    "shape": "plain",
+    "platform": "macos",
+    "note": "A real guard once blocked this command, the one that fixed the hang it was protecting against."
+  },
+  {
+    "id": "stall.network-mount-ls",
+    "category": "stall",
+    "command": "ls /Volumes/team-share/projects",
+    "expect": "none",
+    "origin": "common",
+    "shape": "plain",
+    "note": "On a dead SMB mount this hangs in uninterruptible I/O; only a live probe can tell, not the text."
+  }
+]

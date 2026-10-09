@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SetupError, canaryAfter, canaryBefore } from './canary.js';
 import { classifyHookResult, firstLine } from './classify.js';
+import { validateCases } from './corpus.js';
 
 export const RUN_DEFAULTS = Object.freeze({ timeoutSec: 10, permissionMode: 'default', onFailure: 'continue' });
 /** Output kept per stream; more than this is invalid output. */
@@ -147,6 +148,7 @@ export async function runBench(opts) {
   }
   if (typeof opts.hook !== 'string' || !opts.hook.trim()) throw new TypeError('hook must be a non-empty string');
   if (!opts.cases?.length) throw new SetupError('no-cases', 'no cases to run');
+  validateCases(opts.cases, 'cases');
   const cwd = resolve(opts.cwd ?? process.cwd());
   const timeoutSec = opts.timeoutSec ?? RUN_DEFAULTS.timeoutSec;
   if (!(timeoutSec > 0)) throw new RangeError('timeoutSec must be greater than 0');

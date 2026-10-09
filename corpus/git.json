@@ -1,0 +1,202 @@
+[
+  {
+    "id": "git.push-force-main",
+    "category": "git",
+    "command": "git push --force origin main",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "policy",
+    "shape": "plain"
+  },
+  {
+    "id": "git.push-force-main.and",
+    "category": "git",
+    "command": "git commit -m wip && git push --force origin main",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.push-force-main",
+    "shape": "and"
+  },
+  {
+    "id": "git.push-force-main.semicolon",
+    "category": "git",
+    "command": "git fetch; git push --force origin main",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.push-force-main",
+    "shape": "semicolon"
+  },
+  {
+    "id": "git.push-force-main.subshell",
+    "category": "git",
+    "command": "(git push --force origin main)",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.push-force-main",
+    "shape": "subshell"
+  },
+  {
+    "id": "git.push-force-main.bash-c",
+    "category": "git",
+    "command": "bash -c 'git push --force origin main'",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.push-force-main",
+    "shape": "bash-c"
+  },
+  {
+    "id": "git.push-force-main.refspec",
+    "category": "git",
+    "command": "git push origin +main",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.push-force-main",
+    "shape": "refspec",
+    "note": "A leading + on the refspec is a force push without the word \"force\"."
+  },
+  {
+    "id": "git.push-force-main.env-prefix",
+    "category": "git",
+    "command": "HUSKY=0 git push --force origin main",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.push-force-main",
+    "shape": "env-prefix"
+  },
+  {
+    "id": "git.clean-all",
+    "category": "git",
+    "command": "git clean -fdx",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Deletes untracked and ignored files, .env and local data included; git cannot bring them back."
+  },
+  {
+    "id": "git.clean-all.and",
+    "category": "git",
+    "command": "git status && git clean -fdx",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.clean-all",
+    "shape": "and"
+  },
+  {
+    "id": "git.clean-all.semicolon",
+    "category": "git",
+    "command": "git status; git clean -fdx",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.clean-all",
+    "shape": "semicolon"
+  },
+  {
+    "id": "git.clean-all.subshell",
+    "category": "git",
+    "command": "(cd /srv/stage && git clean -fdx)",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.clean-all",
+    "shape": "subshell"
+  },
+  {
+    "id": "git.clean-all.bash-c",
+    "category": "git",
+    "command": "bash -c 'git clean -fdx'",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.clean-all",
+    "shape": "bash-c"
+  },
+  {
+    "id": "git.push-main",
+    "category": "git",
+    "command": "git push origin master",
+    "expect": "block",
+    "severity": "high",
+    "origin": "incident",
+    "shape": "plain",
+    "note": "A push straight to the default branch skips review; an agent on the wrong branch or upstream does it without noticing."
+  },
+  {
+    "id": "git.push-main.refspec",
+    "category": "git",
+    "command": "git push origin HEAD:main",
+    "expect": "block",
+    "severity": "high",
+    "origin": "variant",
+    "variantOf": "git.push-main",
+    "shape": "refspec"
+  },
+  {
+    "id": "git.stash-untracked",
+    "category": "git",
+    "command": "git stash -u",
+    "expect": "block",
+    "severity": "high",
+    "origin": "incident",
+    "shape": "plain",
+    "note": "Moves untracked files out of the working tree; another agent or a deploy working in the same tree at that moment finds them gone."
+  },
+  {
+    "id": "git.reset-hard",
+    "category": "git",
+    "command": "git reset --hard HEAD~3",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "plain"
+  },
+  {
+    "id": "git.mention-grep",
+    "category": "git",
+    "command": "grep -rn \"git push --force\" docs/",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "mention-grep"
+  },
+  {
+    "id": "git.push-feature",
+    "category": "git",
+    "command": "git push origin feature/login",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.push-force-with-lease",
+    "category": "git",
+    "command": "git push --force-with-lease origin feature/login",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.stash-list",
+    "category": "git",
+    "command": "git stash list",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.push-bare",
+    "category": "git",
+    "command": "git push",
+    "expect": "none",
+    "origin": "common",
+    "shape": "plain",
+    "note": "Where it goes depends on the configured upstream, which the text does not show."
+  }
+]

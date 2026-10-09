@@ -1,0 +1,49 @@
+[
+  {
+    "id": "deploy.prod",
+    "category": "deploy",
+    "command": "vercel deploy --prod",
+    "expect": "block",
+    "severity": "high",
+    "origin": "incident",
+    "shape": "plain",
+    "note": "A production deploy while someone is testing the live site replaces what they are testing."
+  },
+  {
+    "id": "deploy.netlify-prod",
+    "category": "deploy",
+    "command": "netlify deploy --prod",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "plain"
+  },
+  {
+    "id": "deploy.firebase-hosting",
+    "category": "deploy",
+    "command": "firebase deploy --only hosting",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "plain"
+  },
+  {
+    "id": "deploy.stash-then-deploy",
+    "category": "deploy",
+    "command": "git stash && vercel deploy --prod",
+    "expect": "block",
+    "severity": "high",
+    "origin": "incident",
+    "shape": "and",
+    "note": "Stashing first and deploying after can ship a tree with files missing and take the live site down."
+  },
+  {
+    "id": "deploy.preview",
+    "category": "deploy",
+    "command": "vercel deploy",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain",
+    "note": "Without --prod the CLI makes a preview deployment."
+  }
+]

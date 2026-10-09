@@ -1,0 +1,37 @@
+[
+  {
+    "id": "privilege.chmod-777",
+    "category": "privilege",
+    "command": "sudo chmod -R 777 /usr/local",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "sudo"
+  },
+  {
+    "id": "privilege.chown-system",
+    "category": "privilege",
+    "command": "sudo chown -R \"$(whoami)\" /usr",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "sudo"
+  },
+  {
+    "id": "privilege.sudoers-nopasswd",
+    "category": "privilege",
+    "command": "echo \"$USER ALL=(ALL) NOPASSWD: ALL\" | sudo tee -a /etc/sudoers",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "pipe"
+  },
+  {
+    "id": "privilege.chmod-script",
+    "category": "privilege",
+    "command": "chmod +x scripts/build.sh",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  }
+]

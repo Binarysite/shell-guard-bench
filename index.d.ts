@@ -201,6 +201,12 @@ export class SetupError extends Error {
   code: SetupErrorCode;
 }
 
+export function loadCorpus(opts?: { extra?: string[]; only?: string[]; skip?: string[] }): Promise<{
+  cases: Case[];
+  /** Bundled ids replaced by a --cases file. */
+  overridden: string[];
+}>;
+
 /** Throws SetupError (canary, no cases, invalid case, Windows). */
 export function runBench(opts: {
   hook: string;

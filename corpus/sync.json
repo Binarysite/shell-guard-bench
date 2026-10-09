@@ -1,0 +1,80 @@
+[
+  {
+    "id": "sync.rsync-delete-excluded",
+    "category": "sync",
+    "command": "rsync -a --delete-excluded ./stage/ deploy@app-server:/opt/app/",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "incident",
+    "shape": "plain",
+    "note": "--delete-excluded also deletes, on the target, the files the exclude list was meant to protect, such as an .env with credentials."
+  },
+  {
+    "id": "sync.rsync-delete-excluded.and",
+    "category": "sync",
+    "command": "npm run build && rsync -a --delete-excluded ./stage/ deploy@app-server:/opt/app/",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "sync.rsync-delete-excluded",
+    "shape": "and"
+  },
+  {
+    "id": "sync.rsync-delete-excluded.semicolon",
+    "category": "sync",
+    "command": "npm run build; rsync -a --delete-excluded ./stage/ deploy@app-server:/opt/app/",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "sync.rsync-delete-excluded",
+    "shape": "semicolon"
+  },
+  {
+    "id": "sync.rsync-delete-excluded.subshell",
+    "category": "sync",
+    "command": "(cd build && rsync -a --delete-excluded ./stage/ deploy@app-server:/opt/app/)",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "sync.rsync-delete-excluded",
+    "shape": "subshell"
+  },
+  {
+    "id": "sync.rsync-delete-excluded.bash-c",
+    "category": "sync",
+    "command": "bash -c 'rsync -a --delete-excluded ./stage/ deploy@app-server:/opt/app/'",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "sync.rsync-delete-excluded",
+    "shape": "bash-c"
+  },
+  {
+    "id": "sync.rsync-delete-excluded.ssh",
+    "category": "sync",
+    "command": "ssh deploy@app-server \"rsync -a --delete --exclude='.env' /srv/stage/ /srv/app/\"",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "sync.rsync-delete-excluded",
+    "shape": "ssh",
+    "note": "Quotes nested through ssh can drop the excludes, and the guard has to read the remote command."
+  },
+  {
+    "id": "sync.dry-run",
+    "category": "sync",
+    "command": "rsync -a --dry-run --delete ./a/ ./b/",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain",
+    "note": "A dry run deletes nothing."
+  },
+  {
+    "id": "sync.no-delete",
+    "category": "sync",
+    "command": "rsync -a ./stage/ deploy@app-server:/opt/app/",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  }
+]

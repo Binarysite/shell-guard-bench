@@ -1,0 +1,98 @@
+[
+  {
+    "id": "database.drop-table",
+    "category": "database",
+    "command": "psql \"$DATABASE_URL\" -c \"DROP TABLE orders;\"",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "policy",
+    "shape": "plain"
+  },
+  {
+    "id": "database.drop-table.and",
+    "category": "database",
+    "command": "pg_dump \"$DATABASE_URL\" > backup.sql && psql \"$DATABASE_URL\" -c \"DROP TABLE orders;\"",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "database.drop-table",
+    "shape": "and"
+  },
+  {
+    "id": "database.drop-table.semicolon",
+    "category": "database",
+    "command": "echo migrating; psql \"$DATABASE_URL\" -c \"DROP TABLE orders;\"",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "database.drop-table",
+    "shape": "semicolon"
+  },
+  {
+    "id": "database.drop-table.subshell",
+    "category": "database",
+    "command": "(psql \"$DATABASE_URL\" -c \"DROP TABLE orders;\")",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "database.drop-table",
+    "shape": "subshell"
+  },
+  {
+    "id": "database.drop-table.bash-c",
+    "category": "database",
+    "command": "bash -c 'psql \"$DATABASE_URL\" -c \"DROP TABLE orders;\"'",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "database.drop-table",
+    "shape": "bash-c"
+  },
+  {
+    "id": "database.drop-table.heredoc",
+    "category": "database",
+    "command": "psql \"$DATABASE_URL\" <<'SQL'\nDROP TABLE orders;\nSQL",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "database.drop-table",
+    "shape": "heredoc",
+    "note": "A guard that skips heredoc bodies to avoid false positives does not see the SQL fed to an interpreter."
+  },
+  {
+    "id": "database.drop-table.pipe",
+    "category": "database",
+    "command": "echo \"DROP TABLE orders;\" | psql \"$DATABASE_URL\"",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "database.drop-table",
+    "shape": "pipe"
+  },
+  {
+    "id": "database.delete-no-where",
+    "category": "database",
+    "command": "psql \"$DATABASE_URL\" -c \"DELETE FROM orders;\"",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "plain"
+  },
+  {
+    "id": "database.mention-heredoc",
+    "category": "database",
+    "command": "cat > notes.md <<'EOF'\nNever run DROP TABLE orders in production.\nEOF",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "heredoc",
+    "note": "A heredoc into a file: the SQL is text for people, not input for a database."
+  },
+  {
+    "id": "database.select-count",
+    "category": "database",
+    "command": "psql \"$DATABASE_URL\" -c \"SELECT count(*) FROM orders;\"",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  }
+]
