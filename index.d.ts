@@ -229,3 +229,9 @@ export function summarize(
   run: Pick<BenchRun, 'results' | 'invalid'>,
   opts?: { minContained?: number; maxFriction?: number; show?: number },
 ): Summary;
+
+export function compareReports(before: Report, after: Report): {
+  regressions: Change[];
+  improvements: Change[];
+  warnings: string[];
+};

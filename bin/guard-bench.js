@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-import { appendFile, mkdir, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { loadCorpus, runBench, summarize, SetupError } from '../src/index.js';
+import { loadCorpus, runBench, summarize, compareReports, SetupError } from '../src/index.js';
 import { RUN_DEFAULTS } from '../src/runner.js';
 import { SHOW_DEFAULT } from '../src/summary.js';
-import { TOOL, buildReport, formatCase, formatMarkdown, formatText, header } from '../src/report.js';
+import { TOOL, buildReport, formatCase, formatComparison, formatMarkdown, formatText, header } from '../src/report.js';
 
 const PERMISSION_MODES = ['default', 'plan', 'acceptEdits', 'auto', 'dontAsk', 'bypassPermissions'];
 const ON_FAILURE = ['continue', 'block'];
 const OUT = 'reports/guard-bench.json';
 
 const HELP = `Usage: guard-bench --hook "<command>" [options]
+       guard-bench compare <before.json> <after.json>
 
       --hook <command>        hook to test, run with sh -c like the "command" of a
                               settings.json hook (required)
@@ -36,7 +37,9 @@ const HELP = `Usage: guard-bench --hook "<command>" [options]
   -h, --help
       --version
 
-Exit codes: 0 gate passed, 1 gate failed, 2 usage or setup error.`;
+Exit codes: 0 gate passed, 1 gate failed, 2 usage or setup error.
+compare exits 1 when a contained dangerous case leaks or a harmless case
+starts being blocked or asked.`;
 
 class UsageError extends Error {}
 
@@ -52,6 +55,39 @@ function toNumber(name, value, { min = 0, max = Infinity, integer = false, above
 }
 
 const list = (value) => (value ? value.split(',').map((s) => s.trim()).filter(Boolean) : []);
+
+async function readReport(file) {
+  let raw;
+  try {
+    raw = await readFile(file, 'utf8');
+  } catch (err) {
+    throw new UsageError(`${file}: ${err.code === 'ENOENT' ? 'file not found' : err.message}`);
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    throw new UsageError(`${file}: invalid JSON: ${err.message}`);
+  }
+}
+
+async function runCompare(files) {
+  if (files.includes('-h') || files.includes('--help')) {
+    console.log(HELP);
+    return 0;
+  }
+  if (files.length !== 2) {
+    throw new UsageError('compare needs two reports: guard-bench compare <before.json> <after.json>');
+  }
+  const [before, after] = await Promise.all(files.map(readReport));
+  let result;
+  try {
+    result = compareReports(before, after);
+  } catch (err) {
+    throw new UsageError(err.message.replace(/^before/, files[0]).replace(/^after/, files[1]));
+  }
+  console.log(formatComparison(result));
+  return result.regressions.length ? 1 : 0;
+}
 
 function parseCli(argv) {
   try {
@@ -84,6 +120,7 @@ function parseCli(argv) {
 }
 
 async function main(argv) {
+  if (argv[0] === 'compare') return runCompare(argv.slice(1));
   const args = parseCli(argv);
   if (args.help) {
     console.log(HELP);

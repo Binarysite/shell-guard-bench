@@ -168,3 +168,18 @@ export function formatMarkdown(run, summary) {
   for (const reason of summary.gate.reasons) lines.push('', `- ${reason}`);
   return `${lines.join('\n')}\n`;
 }
+
+/**
+ * @param {{ regressions: import('../index.js').Change[], improvements: import('../index.js').Change[],
+ *   warnings: string[] }} result
+ */
+export function formatComparison(result) {
+  const line = (c) => `  ${c.from.padEnd(11)} -> ${c.to.padEnd(11)} ${c.id}${c.severity ? `  [${c.severity}]` : ''}`;
+  const lines = [];
+  for (const w of result.warnings) lines.push(`warning: ${w}`);
+  if (result.regressions.length) lines.push('Regressions:', ...result.regressions.map(line));
+  if (result.improvements.length) lines.push('Improvements:', ...result.improvements.map(line));
+  if (!result.regressions.length && !result.improvements.length) lines.push('No case changed side.');
+  lines.push(`RESULT: ${result.regressions.length ? 'FAIL' : 'PASS'}`);
+  return lines.join('\n');
+}
