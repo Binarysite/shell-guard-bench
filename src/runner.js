@@ -2,6 +2,12 @@
 // JSON on stdin, stdin closed. The command under test only ever travels inside that
 // JSON; it is never part of a shell string.
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { SetupError, canaryAfter, canaryBefore } from './canary.js';
+import { classifyHookResult, firstLine } from './classify.js';
 
 export const RUN_DEFAULTS = Object.freeze({ timeoutSec: 10, permissionMode: 'default', onFailure: 'continue' });
 /** Output kept per stream; more than this is invalid output. */
@@ -125,4 +131,78 @@ export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec
     child.stdin.on('error', () => {});
     child.stdin.end(JSON.stringify(input));
   });
+}
+
+/**
+ * Runs every case through the hook, one at a time and in corpus order, after the
+ * canary. Throws SetupError when the bench cannot be trusted to go on.
+ * @param {{ hook: string, cases: import('../index.js').Case[], cwd?: string, timeoutSec?: number,
+ *   permissionMode?: import('../index.js').PermissionMode, onFailure?: 'continue' | 'block',
+ *   acceptRewrites?: boolean, onResult?: (r: import('../index.js').CaseResult) => void }} opts
+ * @returns {Promise<import('../index.js').BenchRun>}
+ */
+export async function runBench(opts) {
+  if (process.platform === 'win32') {
+    throw new SetupError('unsupported-platform', 'POSIX only in v0.1: hooks run with sh -c');
+  }
+  if (typeof opts.hook !== 'string' || !opts.hook.trim()) throw new TypeError('hook must be a non-empty string');
+  if (!opts.cases?.length) throw new SetupError('no-cases', 'no cases to run');
+  const cwd = resolve(opts.cwd ?? process.cwd());
+  const timeoutSec = opts.timeoutSec ?? RUN_DEFAULTS.timeoutSec;
+  if (!(timeoutSec > 0)) throw new RangeError('timeoutSec must be greater than 0');
+  const permissionMode = opts.permissionMode ?? RUN_DEFAULTS.permissionMode;
+  const onFailure = opts.onFailure ?? RUN_DEFAULTS.onFailure;
+  const acceptRewrites = Boolean(opts.acceptRewrites);
+  const startedAt = new Date().toISOString();
+
+  const dir = await mkdtemp(join(tmpdir(), 'shell-guard-bench-'));
+  try {
+    const transcriptPath = join(dir, 'transcript.jsonl');
+    await writeFile(transcriptPath, '');
+    const ctx = { sessionId: randomUUID(), transcriptPath, cwd, permissionMode };
+    const env = hookEnv(cwd);
+    const judge = async (c, toolUseId) => {
+      const input = hookInput(c, { ...ctx, toolUseId });
+      const raw = await runHook({ hook: opts.hook, input, cwd, timeoutSec, env });
+      return { raw, verdict: classifyHookResult(raw, { command: c.command, onFailure, acceptRewrites }) };
+    };
+
+    await canaryBefore(dir, async (c) => (await judge(c, `toolu_bench_${c.id.replace('-', '_')}`)).verdict);
+
+    const results = [];
+    for (const [i, c] of opts.cases.entries()) {
+      const { raw, verdict } = await judge(c, `toolu_bench_${i + 1}`);
+      const result = {
+        id: c.id,
+        category: c.category,
+        expect: c.expect,
+        severity: c.severity ?? null,
+        origin: c.origin,
+        command: c.command,
+        note: c.note ?? null,
+        outcome: verdict.outcome,
+        contained: verdict.contained,
+        friction: verdict.friction,
+        failure: verdict.failure ?? null,
+        reason: verdict.reason ?? null,
+        legacy: verdict.legacy ?? false,
+        rewrittenCommand: verdict.rewrittenCommand,
+        exitCode: raw.exitCode,
+        signal: raw.signal,
+        timedOut: raw.timedOut,
+        unreapable: raw.unreapable,
+        durationMs: raw.durationMs,
+        stderrFirstLine: firstLine(raw.stderr) || null,
+      };
+      if (result.rewrittenCommand === undefined) delete result.rewrittenCommand;
+      results.push(result);
+      opts.onResult?.(result);
+    }
+    return {
+      hook: opts.hook, cwd, timeoutSec, permissionMode, onFailure, acceptRewrites, startedAt,
+      cases: opts.cases, results, invalid: canaryAfter(dir),
+    };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }

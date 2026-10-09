@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chmod, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { classifyHookResult } from '../src/index.js';
+import { classifyHookResult, runBench } from '../src/index.js';
 import { hookEnv, hookInput, runHook, REAP_GRACE_MS } from '../src/runner.js';
 import { harmless, nodeHook, tempDir } from './helpers.js';
 
@@ -47,6 +47,24 @@ test('the hook gets the documented stdin, cwd and environment', async (t) => {
   assert.deepEqual(seen.otel, []);
   assert.deepEqual(hookInput({ command: 'x' }, ctx).tool_input, { command: 'x' });
   assert.equal(hookEnv(dir, { CLAUDE_PROJECT_DIR: '/srv/app' }).CLAUDE_PROJECT_DIR, '/srv/app');
+});
+
+test('runBench sends one session, a fresh transcript and numbered tool_use_ids', async (t) => {
+  const dir = await tempDir(t);
+  const log = join(dir, 'log.jsonl');
+  const run = await runBench({
+    hook: nodeHook('record.mjs', log), cwd: dir, cases: [harmless('stall.a'), harmless('stall.b')],
+  });
+  const lines = await readLines(log);
+  assert.equal(lines.length, 4, 'two canaries and two cases');
+  const [first, second] = lines.slice(2).map((l) => l.input);
+  assert.match(first.session_id, /^[0-9a-f-]{36}$/);
+  assert.equal(second.session_id, first.session_id);
+  assert.deepEqual([first.tool_use_id, second.tool_use_id], ['toolu_bench_1', 'toolu_bench_2']);
+  assert.equal(first.permission_mode, 'default');
+  assert.match(first.transcript_path, /transcript\.jsonl$/);
+  assert.deepEqual(run.results.map((r) => r.outcome), ['passthrough', 'passthrough']);
+  assert.equal(run.invalid, null);
 });
 
 test('a timeout kills the whole process group, grandchildren included', async (t) => {

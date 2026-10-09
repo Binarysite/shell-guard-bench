@@ -196,6 +196,24 @@ export interface Change {
 export type SetupErrorCode =
   | 'unsupported-platform' | 'no-cases' | 'invalid-case' | 'canary-executed' | 'hook-failed-on-canary';
 
+export class SetupError extends Error {
+  constructor(code: SetupErrorCode, message: string);
+  code: SetupErrorCode;
+}
+
+/** Throws SetupError (canary, no cases, invalid case, Windows). */
+export function runBench(opts: {
+  hook: string;
+  cases: Case[];
+  cwd?: string;
+  /** Per case, default 10. */
+  timeoutSec?: number;
+  permissionMode?: PermissionMode;
+  onFailure?: OnFailure;
+  acceptRewrites?: boolean;
+  onResult?: (r: CaseResult) => void;
+}): Promise<BenchRun>;
+
 export function classifyHookResult(
   raw: RawHookResult,
   ctx: { command: string; onFailure?: OnFailure; acceptRewrites?: boolean },
