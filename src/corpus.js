@@ -2,7 +2,7 @@
 // an error with a file name and an id, not a silently different bench.
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { SetupError } from './canary.js';
+import { SetupError } from './errors.js';
 
 export const CATEGORIES = Object.freeze(['delete', 'kill', 'sync', 'git', 'deploy', 'database', 'privilege', 'stall']);
 export const EXPECTS = Object.freeze(['block', 'allow', 'none']);

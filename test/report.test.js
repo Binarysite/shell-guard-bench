@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { summarize } from '../src/index.js';
-import { buildReport, formatMarkdown, formatText, TOOL } from '../src/report.js';
+import { TOOL } from '../src/meta.js';
+import { buildReport, formatMarkdown, formatText } from '../src/report.js';
 import { cli, root, tempDir } from './helpers.js';
 
 const result = (id, expect, outcome, extra = {}) => ({

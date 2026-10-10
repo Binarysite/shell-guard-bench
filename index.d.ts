@@ -1,6 +1,8 @@
-// Public contracts of shell-guard-bench (src/index.js).
-// The JSDoc in src/ is the source of truth; `npm run typecheck` checks both and,
-// through test-types/conform.ts, that src/index.js provides what this file declares.
+// Public contracts of shell-guard-bench (src/index.js), written by hand.
+// This file is the source of the shapes: the JSDoc in src/ imports them, and
+// `npm run typecheck` checks src against them (test-types/conform.ts: src/index.js
+// provides what is declared here). test/types.test.js checks the other way: the
+// unions below list exactly the runtime values, and every runtime export is declared.
 
 export type Category = 'delete' | 'kill' | 'sync' | 'git' | 'deploy' | 'database' | 'privilege' | 'stall';
 /** `none` cases are run and printed but not scored. */
@@ -79,8 +81,10 @@ export interface CaseResult {
   contained: boolean;
   friction: boolean;
   failure: Failure | null;
+  /** One line, at most 200 characters. */
   reason: string | null;
   legacy: boolean;
+  /** One line, at most 200 characters. */
   rewrittenCommand?: string | null;
   exitCode: number | null;
   signal: string | null;

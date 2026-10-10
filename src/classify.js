@@ -9,8 +9,8 @@ export const CONTRACT = Object.freeze({
   checked: '2026-10-09',
 });
 
-export const DECISIONS = Object.freeze(['allow', 'deny', 'ask', 'defer']);
-export const LEGACY_DECISIONS = Object.freeze({ approve: 'allow', block: 'deny' });
+const DECISIONS = Object.freeze(['allow', 'deny', 'ask', 'defer']);
+const LEGACY_DECISIONS = Object.freeze({ approve: 'allow', block: 'deny' });
 const STRING_FIELDS = ['reason', 'stopReason', 'systemMessage', 'terminalSequence'];
 const BOOLEAN_FIELDS = ['continue', 'suppressOutput'];
 const KNOWN_FIELDS = [...STRING_FIELDS, ...BOOLEAN_FIELDS, 'decision', 'hookSpecificOutput'];
@@ -28,7 +28,7 @@ function isObject(v) {
  * @param {unknown} out
  * @returns {string | null} the first problem, or null when the output is valid
  */
-export function schemaError(out) {
+function schemaError(out) {
   if (!isObject(out)) return 'output is not a JSON object';
   const o = out;
   for (const k of STRING_FIELDS) if (k in o && typeof o[k] !== 'string') return `${k} must be a string`;

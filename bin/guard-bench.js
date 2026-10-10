@@ -5,7 +5,8 @@ import { parseArgs } from 'node:util';
 import { loadCorpus, runBench, summarize, compareReports, SetupError } from '../src/index.js';
 import { ON_FAILURE, PERMISSION_MODES, RUN_DEFAULTS, isDirectory } from '../src/runner.js';
 import { SHOW_DEFAULT } from '../src/summary.js';
-import { TOOL, buildReport, formatCase, formatComparison, formatMarkdown, formatText, header } from '../src/report.js';
+import { TOOL } from '../src/meta.js';
+import { buildReport, formatCase, formatComparison, formatMarkdown, formatText, header } from '../src/report.js';
 
 const OUT = 'reports/guard-bench.json';
 

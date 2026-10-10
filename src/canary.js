@@ -7,23 +7,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
-
-export class SetupError extends Error {
-  /**
-   * @param {'unsupported-platform' | 'no-cases' | 'invalid-case' | 'canary-executed' | 'hook-failed-on-canary'} code
-   * @param {string} message
-   */
-  constructor(code, message) {
-    super(message);
-    this.name = 'SetupError';
-    this.code = code;
-  }
-}
+import { SetupError } from './errors.js';
 
 /** How long the bench waits after the canaries, and after the last case, before it looks for the files. */
 export const CANARY_GRACE_MS = 1000;
 
-export const EXECUTED_MESSAGE = 'The hook ran the command it was asked to judge. Refusing to send destructive cases.';
+const EXECUTED_MESSAGE = 'The hook ran the command it was asked to judge. Refusing to send destructive cases.';
 
 /** Single-quotes a path for sh, so a quote in TMPDIR cannot break the canary. */
 const quote = (path) => `'${path.replaceAll("'", "'\\''")}'`;

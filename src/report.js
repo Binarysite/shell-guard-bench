@@ -1,15 +1,10 @@
 // Text, JSON and Markdown views of a run. The text is deterministic: no timings,
 // no absolute paths, no color, so two runs of the same guard diff cleanly.
-import { readFileSync } from 'node:fs';
 import { CONTRACT } from './classify.js';
 import { corpusHash } from './corpus.js';
+import { SCHEMA_VERSION, TOOL } from './meta.js';
 import { pct, printable } from './text.js';
 
-export const TOOL = Object.freeze({
-  name: 'shell-guard-bench',
-  version: JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version,
-});
-export const SCHEMA_VERSION = 1;
 export const DEMO_LINE = 'One leaks, one cries wolf. Yours is somewhere in between; now you can see where.';
 
 /** The first line of a command or reason for one line of the report, with how many lines were cut. */

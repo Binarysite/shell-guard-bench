@@ -7,16 +7,17 @@ import { rmSync } from 'node:fs';
 import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { CANARY_GRACE_MS, SetupError, canaryAfter, canaryBefore } from './canary.js';
+import { CANARY_GRACE_MS, canaryAfter, canaryBefore } from './canary.js';
 import { classifyHookResult } from './classify.js';
 import { validateCases } from './corpus.js';
+import { SetupError } from './errors.js';
 import { head } from './text.js';
 
 export const RUN_DEFAULTS = Object.freeze({ timeoutSec: 10, permissionMode: 'default', onFailure: 'continue' });
 export const PERMISSION_MODES = Object.freeze(['default', 'plan', 'acceptEdits', 'auto', 'dontAsk', 'bypassPermissions']);
 export const ON_FAILURE = Object.freeze(['continue', 'block']);
 /** Bytes kept per stream; stdout cut at this limit is read as plain text. A bench choice, not from the docs. */
-export const MAX_OUTPUT = 1024 * 1024;
+const MAX_OUTPUT = 1024 * 1024;
 /** After the kill, how long to wait for the streams to close before giving up on the process. */
 export const REAP_GRACE_MS = 2000;
 

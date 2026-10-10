@@ -145,9 +145,10 @@ not emulate that.
   run it at once, a moment later from another process group, and on a later
   call. A hook that runs only some commands, or waits longer, is not caught;
   for an untrusted hook, use a container or a VM.
-- **Third-party `--cases`.** Data only, never interpolated into a shell; the
-  PATH tripwire test proves it for the whole corpus, newlines and quotes
-  included. The text and Markdown reports write control characters from cases
+- **Third-party `--cases`.** Data only, never interpolated into a shell. The
+  PATH tripwire test runs the whole corpus, and another test loads a hostile
+  `--cases` file (`$(...)`, backticks, `;`, newlines, broken quotes) and checks
+  that nothing ran. The text and Markdown reports write control characters from cases
   and hooks as `\uXXXX`, so an escape sequence cannot drive the terminal.
 - **The hook hangs or forks.** Process-group kill and a hard deadline.
 - **The hook floods its output.** The bench keeps at most 1 MiB per stream (its
@@ -204,7 +205,9 @@ not emulate that.
 bin/guard-bench.js    CLI: flags, exit codes, compare
 src/classify.js       the contract table, pure, with its source and date
 src/runner.js         spawn, stdin, timeout, process group, output limits, runBench
-src/canary.js         canary before and after; SetupError
+src/canary.js         canary before and after
+src/errors.js         SetupError and its codes
+src/meta.js           tool name, version and report schema version
 src/corpus.js         loading, strict validation, overrides, filters, hash
 src/summary.js        metrics and the gate
 src/report.js         text, JSON and Markdown

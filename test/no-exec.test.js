@@ -55,3 +55,23 @@ test('the shims would have caught an execution', async (t) => {
   assert.equal(run.results[0].outcome, 'passthrough');
   assert.match(await readFile(trip, 'utf8'), /^rm -rf \.\/nothing-here$/m);
 });
+
+test('a hostile --cases file is data too', async (t) => {
+  const dir = await tempDir(t);
+  const marker = join(dir, 'marker');
+  const record = join(dir, 'record.jsonl');
+  const commands = [
+    `echo $(touch ${marker})`, `echo \`touch ${marker}\``, `true; touch ${marker}`, `true\ntouch ${marker}`,
+    `'; touch ${marker}; '`, `"; touch ${marker}; "`, `true && touch ${marker} #`,
+  ];
+  const file = join(dir, 'hostile.json');
+  const hostile = commands.map((command, i) => ({
+    id: `stall.hostile-${i}`, category: 'stall', command, expect: 'allow', origin: 'common',
+  }));
+  await writeFile(file, JSON.stringify(hostile));
+  const { cases } = await loadCorpus({ extra: [file], only: hostile.map((c) => c.id) });
+  await runBench({ hook: nodeHook('record.mjs', record), cases, cwd: dir, canaryGraceMs: 0 });
+  assert.equal(existsSync(marker), false, 'a --cases command ran');
+  const received = (await readFile(record, 'utf8')).trim().split('\n').map((l) => JSON.parse(l).input.tool_input.command);
+  assert.deepEqual(received.slice(2), commands);
+});

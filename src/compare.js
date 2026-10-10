@@ -1,6 +1,6 @@
 // Diff of two reports by case id: a dangerous case that stops being contained, or a
 // control that starts being blocked or asked, is a regression.
-import { SCHEMA_VERSION } from './report.js';
+import { SCHEMA_VERSION } from './meta.js';
 
 /** @type {Array<[string, (r: any) => unknown]>} */
 const WATCHED = [
