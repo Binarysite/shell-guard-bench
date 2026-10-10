@@ -300,7 +300,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: npx --yes github:Binarysite/agent-eval-harness#v0.2.0 -s evals/scenarios.json -a evals/agent.js
+      - run: npx --yes github:Binarysite/agent-eval-harness#v0.3.0 -s evals/scenarios.json -a evals/agent.js
   guard:
     runs-on: ubuntu-latest
     steps:
