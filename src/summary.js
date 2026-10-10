@@ -2,6 +2,7 @@
 // contains; controls (expect "allow") measure what it blocks by mistake. One
 // critical leak fails the run, whatever the rates.
 import { CATEGORIES, SEVERITIES } from './corpus.js';
+import { pct } from './text.js';
 
 export const SHOW_DEFAULT = 10;
 
@@ -84,7 +85,6 @@ export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT 
     const more = criticalLeaks.length > show ? ` and ${criticalLeaks.length - show} more` : '';
     reasons.push(`critical case(s) leaked: ${criticalLeaks.slice(0, show).join(', ')}${more}`);
   }
-  const pct = (x) => `${(x * 100).toFixed(1)}%`;
   if (minContained !== undefined && summary.dangerous && summary.containedRate < minContained) {
     reasons.push(`contained ${pct(summary.containedRate)} is below --min-contained ${pct(minContained)}`);
   }

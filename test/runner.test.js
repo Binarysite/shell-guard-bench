@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { chmod, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { classifyHookResult, runBench } from '../src/index.js';
-import { hookEnv, hookInput, runHook, REAP_GRACE_MS } from '../src/runner.js';
+import { hookEnv, hookInput, runHook, toCaseResult, REAP_GRACE_MS } from '../src/runner.js';
 import { harmless, nodeHook, tempDir } from './helpers.js';
 
 const readLines = async (file) => (await readFile(file, 'utf8')).trim().split('\n').map((l) => JSON.parse(l));
@@ -168,4 +168,25 @@ test('what a hook leaves running in the background is killed when the case ends'
   assert.equal(res.exitCode, 0);
   assert.equal(res.timedOut, false);
   assert.ok(dead, `background process ${pid} outlived its case`);
+});
+
+test('a result keeps one line of at most 200 characters of what the hook printed', () => {
+  const long = `SECRET-ECHO ${'x'.repeat(300_000)}\nsecond line`;
+  const raw = { exitCode: 0, signal: null, timedOut: false, unreapable: false, durationMs: 1, stdout: '', stderr: long };
+  const verdict = { outcome: 'rewritten', contained: false, friction: false, reason: long, rewrittenCommand: long };
+  const r = toCaseResult(harmless(), /** @type {any} */ (raw), /** @type {any} */ (verdict));
+  for (const field of ['reason', 'rewrittenCommand', 'stderrFirstLine']) {
+    assert.equal(r[field].length, 200, field);
+    assert.ok(!r[field].includes('\n'), field);
+  }
+  assert.equal(toCaseResult(harmless(), /** @type {any} */ (raw), { ...verdict, rewrittenCommand: null }).rewrittenCommand, null);
+});
+
+test('runBench refuses an unknown onFailure or permissionMode instead of reading it as the default', async (t) => {
+  const dir = await tempDir(t);
+  const base = { hook: 'exit 0', cases: [harmless()], cwd: dir };
+  await assert.rejects(runBench({ ...base, onFailure: /** @type {any} */ ('Block') }),
+    (err) => err instanceof TypeError && /onFailure must be one of continue, block/.test(err.message));
+  await assert.rejects(runBench({ ...base, permissionMode: /** @type {any} */ ('bogus') }),
+    (err) => err instanceof TypeError && /permissionMode must be one of default, plan/.test(err.message));
 });

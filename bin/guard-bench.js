@@ -3,12 +3,10 @@ import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadCorpus, runBench, summarize, compareReports, SetupError } from '../src/index.js';
-import { RUN_DEFAULTS, isDirectory } from '../src/runner.js';
+import { ON_FAILURE, PERMISSION_MODES, RUN_DEFAULTS, isDirectory } from '../src/runner.js';
 import { SHOW_DEFAULT } from '../src/summary.js';
 import { TOOL, buildReport, formatCase, formatComparison, formatMarkdown, formatText, header } from '../src/report.js';
 
-const PERMISSION_MODES = ['default', 'plan', 'acceptEdits', 'auto', 'dontAsk', 'bypassPermissions'];
-const ON_FAILURE = ['continue', 'block'];
 const OUT = 'reports/guard-bench.json';
 
 const HELP = `Usage: guard-bench --hook "<command>" [options]
@@ -22,9 +20,9 @@ const HELP = `Usage: guard-bench --hook "<command>" [options]
       --skip <list>           skip these categories or id prefixes
       --cwd <dir>             working directory of the hook and the "cwd" field
       --timeout <seconds>     per case (default ${RUN_DEFAULTS.timeoutSec}; Claude Code's default is 600)
-      --permission-mode <m>   default | plan | acceptEdits | auto | dontAsk |
-                              bypassPermissions (default "${RUN_DEFAULTS.permissionMode}")
-      --on-failure <mode>     continue | block, as the hook's onFailure setting
+      --permission-mode <m>   ${PERMISSION_MODES.slice(0, 5).join(' | ')} |
+                              ${PERMISSION_MODES.slice(5).join(' | ')} (default "${RUN_DEFAULTS.permissionMode}")
+      --on-failure <mode>     ${ON_FAILURE.join(' | ')}, as the hook's onFailure setting
                               (default ${RUN_DEFAULTS.onFailure}, which lets the command run)
       --accept-rewrites       count an updatedInput rewrite of a dangerous command
                               as contained
@@ -134,7 +132,7 @@ async function main(argv) {
   if (!PERMISSION_MODES.includes(args['permission-mode'])) {
     throw new UsageError(`--permission-mode must be one of ${PERMISSION_MODES.join(', ')}`);
   }
-  if (!ON_FAILURE.includes(args['on-failure'])) throw new UsageError('--on-failure must be continue or block');
+  if (!ON_FAILURE.includes(args['on-failure'])) throw new UsageError(`--on-failure must be ${ON_FAILURE.join(' or ')}`);
   const timeoutSec = toNumber('timeout', args.timeout, { min: 0, max: 86_400, above: true });
   const show = toNumber('show', args.show, { integer: true });
   const rate = (name) => (args[name] === undefined ? undefined : toNumber(name, args[name], { max: 1 }));

@@ -21,8 +21,9 @@ that triggered it. You should get an answer within a week.
 - A test runs the whole corpus with shims of `rm`, `git`, `psql` and other
   dangerous programs first in PATH, and fails if any of them is invoked.
 - The hook runs in its own process group with a timeout and a hard deadline.
-- Reports keep the hook command and the first line of stderr, never the
-  environment, the working directory or full output.
+- Reports keep the hook command and one line of at most 200 characters of the
+  hook's stderr, reason and rewritten command, never the environment, the
+  working directory or full output.
 
 What it cannot do: stop a hook that does harm on its own. The canary is best
 effort: a hook that runs only some commands (say, only the ones that start with

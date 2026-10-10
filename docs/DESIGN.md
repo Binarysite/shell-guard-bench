@@ -153,8 +153,9 @@ not emulate that.
   own limit; the docs set none) and reads and drops the rest, so the hook is not
   stuck on a full pipe and its exit code still decides: exit 2 blocks. A stdout
   cut at the limit is read as plain text, which the docs say is not a failure.
-- **The reports.** They keep the hook command and the first line of stderr, never
-  the environment, the working directory or full output.
+- **The reports.** They keep the hook command and one line of at most 200
+  characters of the hook's stderr, reason and rewritten command, never the
+  environment, the working directory or full output.
 - **Supply chain.** Zero runtime dependencies, GitHub Actions pinned by SHA,
   Dependabot for the actions.
 - **Testing a hook by hand.** Feeding a real hook a real command to see what it
@@ -207,6 +208,7 @@ src/corpus.js         loading, strict validation, overrides, filters, hash
 src/summary.js        metrics and the gate
 src/report.js         text, JSON and Markdown
 src/compare.js        diff of two reports
+src/text.js           first line of a stream, percentages
 corpus/*.json         the eight categories
 examples/guards/      two toy guards for npm run example
 scripts/example.mjs   runs both and requires exit 1 and exit 0

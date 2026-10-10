@@ -8,10 +8,13 @@ import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { CANARY_GRACE_MS, SetupError, canaryAfter, canaryBefore } from './canary.js';
-import { classifyHookResult, firstLine } from './classify.js';
+import { classifyHookResult } from './classify.js';
 import { validateCases } from './corpus.js';
+import { head } from './text.js';
 
 export const RUN_DEFAULTS = Object.freeze({ timeoutSec: 10, permissionMode: 'default', onFailure: 'continue' });
+export const PERMISSION_MODES = Object.freeze(['default', 'plan', 'acceptEdits', 'auto', 'dontAsk', 'bypassPermissions']);
+export const ON_FAILURE = Object.freeze(['continue', 'block']);
 /** Bytes kept per stream; stdout cut at this limit is read as plain text. A bench choice, not from the docs. */
 export const MAX_OUTPUT = 1024 * 1024;
 /** After the kill, how long to wait for the streams to close before giving up on the process. */
@@ -150,6 +153,41 @@ export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec
 }
 
 /**
+ * One case, what the runner saw and what it means, as one result. What the hook
+ * printed (its reason, a rewritten command, stderr) is cut to one line of at most
+ * 200 characters, so a hook cannot pour its environment into a report.
+ * @param {import('../index.js').Case} c
+ * @param {Awaited<ReturnType<typeof runHook>>} raw
+ * @param {import('../index.js').Verdict} verdict
+ * @returns {import('../index.js').CaseResult}
+ */
+export function toCaseResult(c, raw, verdict) {
+  return {
+    id: c.id,
+    category: c.category,
+    expect: c.expect,
+    severity: c.severity ?? null,
+    origin: c.origin,
+    command: c.command,
+    note: c.note ?? null,
+    outcome: verdict.outcome,
+    contained: verdict.contained,
+    friction: verdict.friction,
+    failure: verdict.failure ?? null,
+    reason: verdict.reason ? head(verdict.reason) : null,
+    legacy: verdict.legacy ?? false,
+    ...(verdict.rewrittenCommand !== undefined
+      ? { rewrittenCommand: verdict.rewrittenCommand === null ? null : head(verdict.rewrittenCommand) } : {}),
+    exitCode: raw.exitCode,
+    signal: raw.signal,
+    timedOut: raw.timedOut,
+    unreapable: raw.unreapable,
+    durationMs: raw.durationMs,
+    stderrFirstLine: head(raw.stderr) || null,
+  };
+}
+
+/**
  * Runs every case through the hook, one at a time and in corpus order, after the
  * canary. Throws SetupError when the bench cannot be trusted to go on.
  * @param {{ hook: string, cases: import('../index.js').Case[], cwd?: string, timeoutSec?: number,
@@ -171,6 +209,11 @@ export async function runBench(opts) {
   if (!(timeoutSec > 0)) throw new RangeError('timeoutSec must be greater than 0');
   const permissionMode = opts.permissionMode ?? RUN_DEFAULTS.permissionMode;
   const onFailure = opts.onFailure ?? RUN_DEFAULTS.onFailure;
+  // A typo must not quietly fall back to the default, which is the permissive side.
+  if (!PERMISSION_MODES.includes(permissionMode)) {
+    throw new TypeError(`permissionMode must be one of ${PERMISSION_MODES.join(', ')}`);
+  }
+  if (!ON_FAILURE.includes(onFailure)) throw new TypeError(`onFailure must be one of ${ON_FAILURE.join(', ')}`);
   const acceptRewrites = Boolean(opts.acceptRewrites);
   const graceMs = opts.canaryGraceMs ?? CANARY_GRACE_MS;
   if (!(graceMs >= 0)) throw new RangeError('canaryGraceMs must be 0 or more');
@@ -208,29 +251,7 @@ export async function runBench(opts) {
     const results = [];
     for (const [i, c] of opts.cases.entries()) {
       const { raw, verdict } = await judge(c, `toolu_bench_${i + 1}`);
-      const result = {
-        id: c.id,
-        category: c.category,
-        expect: c.expect,
-        severity: c.severity ?? null,
-        origin: c.origin,
-        command: c.command,
-        note: c.note ?? null,
-        outcome: verdict.outcome,
-        contained: verdict.contained,
-        friction: verdict.friction,
-        failure: verdict.failure ?? null,
-        reason: verdict.reason ?? null,
-        legacy: verdict.legacy ?? false,
-        rewrittenCommand: verdict.rewrittenCommand,
-        exitCode: raw.exitCode,
-        signal: raw.signal,
-        timedOut: raw.timedOut,
-        unreapable: raw.unreapable,
-        durationMs: raw.durationMs,
-        stderrFirstLine: firstLine(raw.stderr) || null,
-      };
-      if (result.rewrittenCommand === undefined) delete result.rewrittenCommand;
+      const result = toCaseResult(c, raw, verdict);
       results.push(result);
       opts.onResult?.(result);
     }

@@ -1,6 +1,7 @@
 // The Claude Code PreToolUse contract as a pure function: what one hook run means
 // for the Bash command it was asked to judge. Every rule here comes from the page
 // in CONTRACT.source, read on CONTRACT.checked; docs/DESIGN.md has the table.
+import { head } from './text.js';
 
 /** Where the emulated contract comes from and the day it was last checked against it. */
 export const CONTRACT = Object.freeze({
@@ -21,8 +22,6 @@ const KNOWN_FIELDS = [...STRING_FIELDS, ...BOOLEAN_FIELDS, 'decision', 'hookSpec
 function isObject(v) {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
-/** First non-empty line of a stream, at most 200 characters. */
-export const firstLine = (text) => String(text ?? '').trim().split('\n')[0].slice(0, 200);
 
 /**
  * Checks the fields Claude Code knows; unknown keys are ignored, as in Claude Code.
@@ -149,7 +148,7 @@ export function classifyHookResult(raw, ctx) {
   const failed = (failure, reason) => ({
     outcome: 'failed', contained: blocksOnFailure, friction: blocksOnFailure, failure, reason,
   });
-  const stderr = firstLine(raw.stderr);
+  const stderr = head(raw.stderr);
 
   if (raw.spawnError) return failed('cannot-start', raw.spawnError.message);
   if (raw.timedOut) return failed('timeout', 'timed out');

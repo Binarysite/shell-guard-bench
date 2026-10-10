@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { CONTRACT } from './classify.js';
 import { corpusHash } from './corpus.js';
+import { pct } from './text.js';
 
 export const TOOL = Object.freeze({
   name: 'shell-guard-bench',
@@ -11,8 +12,8 @@ export const TOOL = Object.freeze({
 export const SCHEMA_VERSION = 1;
 export const DEMO_LINE = 'One leaks, one cries wolf. Yours is somewhere in between; now you can see where.';
 
-const pct = (x) => (x === null ? 'n/a' : `${(x * 100).toFixed(1)}%`);
-const firstLine = (text, max = 70) => {
+/** The first line of a command or reason for one line of the report, with how many lines were cut. */
+const preview = (text, max = 70) => {
   const line = String(text).split('\n')[0];
   const cut = line.length > max ? `${line.slice(0, max - 3)}...` : line;
   return String(text).includes('\n') ? `${cut} [+${String(text).split('\n').length - 1} lines]` : cut;
@@ -47,7 +48,7 @@ export function header(run) {
 /** One line per case, for --verbose. */
 export function formatCase(r) {
   const sev = r.severity ? `[${r.severity}] ` : '';
-  return `${r.outcome.padEnd(11)} ${r.expect.padEnd(5)}  ${sev}${r.id}  ${firstLine(r.command)}`;
+  return `${r.outcome.padEnd(11)} ${r.expect.padEnd(5)}  ${sev}${r.id}  ${preview(r.command)}`;
 }
 
 function failOpenLine(summary) {
@@ -79,9 +80,9 @@ export function formatText(run, summary, { out = 'the JSON report', withHeader =
     for (const id of ids.slice(0, summary.show)) lines.push(render(byId.get(id)));
     if (ids.length > summary.show) lines.push(`  and ${ids.length - summary.show} more in ${out}`);
   };
-  list(summary.leaked, (r) => `LEAKED      [${r.severity}] ${r.id}  ${firstLine(r.command)}  (${r.outcome})`);
-  list(summary.frictionIds, (r) => `FRICTION    ${r.id}  ${firstLine(r.command)}  (${r.outcome}`
-    + `${r.reason ? `: ${firstLine(r.reason, 80)}` : ''})`);
+  list(summary.leaked, (r) => `LEAKED      [${r.severity}] ${r.id}  ${preview(r.command)}  (${r.outcome})`);
+  list(summary.frictionIds, (r) => `FRICTION    ${r.id}  ${preview(r.command)}  (${r.outcome}`
+    + `${r.reason ? `: ${preview(r.reason, 80)}` : ''})`);
   for (const id of summary.notScoredIds) {
     const r = byId.get(id);
     lines.push(`NOT SCORED  ${r.id}  ${r.outcome}  ${r.note ?? ''}`.trimEnd());
@@ -93,8 +94,9 @@ export function formatText(run, summary, { out = 'the JSON report', withHeader =
 }
 
 /**
- * The JSON report. It keeps the hook command and the first line of stderr, never
- * the environment, the working directory or full output.
+ * The JSON report. It keeps the hook command and one line of at most 200 characters
+ * of the hook's stderr, reason and rewritten command, never the environment, the
+ * working directory or full output.
  * @param {import('../index.js').BenchRun} run
  * @param {import('../index.js').Summary} summary
  * @returns {import('../index.js').Report}
