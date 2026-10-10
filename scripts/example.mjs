@@ -13,9 +13,9 @@ const RUNS = [
 const codes = [];
 for (const { guard } of RUNS) {
   const hook = `node examples/guards/${guard}.mjs`;
-  const args = ['--hook', hook, '--show', '5', '--out', `reports/${guard}.json`];
+  const args = ['--hook', hook, '--show', '3', '--out', `reports/${guard}.json`];
   const run = spawnSync(process.execPath, ['bin/guard-bench.js', ...args], { cwd: root, encoding: 'utf8' });
-  console.log(`$ guard-bench --hook "${hook}" --show 5`);
+  console.log(`$ guard-bench --hook "${hook}" --show 3`);
   process.stdout.write(run.stdout + run.stderr);
   console.log(`exit code ${run.status}\n`);
   codes.push(run.status);
