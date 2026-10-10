@@ -7,7 +7,7 @@ import { rmSync } from 'node:fs';
 import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { SetupError, canaryAfter, canaryBefore } from './canary.js';
+import { CANARY_GRACE_MS, SetupError, canaryAfter, canaryBefore } from './canary.js';
 import { classifyHookResult, firstLine } from './classify.js';
 import { validateCases } from './corpus.js';
 
@@ -157,7 +157,8 @@ export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec
  * canary. Throws SetupError when the bench cannot be trusted to go on.
  * @param {{ hook: string, cases: import('../index.js').Case[], cwd?: string, timeoutSec?: number,
  *   permissionMode?: import('../index.js').PermissionMode, onFailure?: 'continue' | 'block',
- *   acceptRewrites?: boolean, onResult?: (r: import('../index.js').CaseResult) => void }} opts
+ *   acceptRewrites?: boolean, canaryGraceMs?: number,
+ *   onResult?: (r: import('../index.js').CaseResult) => void }} opts
  * @returns {Promise<import('../index.js').BenchRun>}
  */
 export async function runBench(opts) {
@@ -174,6 +175,8 @@ export async function runBench(opts) {
   const permissionMode = opts.permissionMode ?? RUN_DEFAULTS.permissionMode;
   const onFailure = opts.onFailure ?? RUN_DEFAULTS.onFailure;
   const acceptRewrites = Boolean(opts.acceptRewrites);
+  const graceMs = opts.canaryGraceMs ?? CANARY_GRACE_MS;
+  if (!(graceMs >= 0)) throw new RangeError('canaryGraceMs must be 0 or more');
   const startedAt = new Date().toISOString();
 
   const dir = await mkdtemp(join(tmpdir(), 'shell-guard-bench-'));
@@ -203,7 +206,7 @@ export async function runBench(opts) {
       return { raw, verdict: classifyHookResult(raw, { command: c.command, onFailure, acceptRewrites }) };
     };
 
-    await canaryBefore(dir, async (c) => (await judge(c, `toolu_bench_${c.id.replace('-', '_')}`)).verdict);
+    await canaryBefore(dir, async (c) => (await judge(c, `toolu_bench_${c.id.replace('-', '_')}`)).verdict, graceMs);
 
     const results = [];
     for (const [i, c] of opts.cases.entries()) {
@@ -236,7 +239,7 @@ export async function runBench(opts) {
     }
     return {
       hook: opts.hook, cwd, timeoutSec, permissionMode, onFailure, acceptRewrites, startedAt,
-      cases: opts.cases, results, invalid: canaryAfter(dir),
+      cases: opts.cases, results, invalid: await canaryAfter(dir, graceMs),
     };
   } finally {
     stopListening();

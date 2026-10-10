@@ -95,7 +95,8 @@ One leaks, one cries wolf. Yours is somewhere in between; now you can see where.
 
 No command from the corpus is ever executed. Each one only travels inside the JSON the hook reads on stdin, and
 before the first dangerous case the bench sends two harmless canaries that create a file: if the file appears, the
-hook ran what it was asked to judge and the bench stops with exit 2.
+hook ran what it was asked to judge and the bench stops with exit 2. The canary is a best-effort check, not a
+sandbox: [SECURITY.md](SECURITY.md) says what it cannot catch.
 
 ```mermaid
 flowchart LR
@@ -277,7 +278,7 @@ Checked on 2026-10-09 against the GitHub API.
   with a CI gate on both rates. Its runner reads the verdict from the exit code (2 blocks, anything else allows).
   shell-guard-bench emulates the full decision contract (JSON `deny`, `ask`, `defer` and `allow`, the legacy
   `decision`, `updatedInput`, `continue: false` and `onFailure`), ships a curated adversarial corpus with
-  provenance and a coverage rule, fails on a single critical leak, refuses to go on when the hook runs its input,
+  provenance and a coverage rule, fails on a single critical leak, stops when the hook runs a canary command,
   and is Node with no dependencies.
 - Any PreToolUse guard for Bash, from a ten-line script to a published policy engine, can be measured with this
   bench. The repository carries no scores of third-party guards.

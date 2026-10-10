@@ -13,10 +13,13 @@ measurement that works for every policy, and it is the part that was missing.
 command, so the text is what the bench sends. Nothing in the corpus runs: the
 command travels inside the stdin JSON and is never part of a shell string. The
 one risk left is a hook that runs what it receives, so two harmless canaries
-(`touch` of a file in a fresh temporary directory) go first; if a file appears
-the bench stops before any dangerous case is sent. The files are checked again
-at the end, for a hook that runs things late, and a test puts shims of `rm`,
-`git`, `psql` and the rest first in PATH while the whole corpus goes through.
+(`touch` of a file in a fresh temporary directory) go first. The bench waits a
+second for a hook that runs them in the background, and if a file appears it
+stops before any dangerous case is sent. The files are checked again after the
+last case, for a hook that runs things late; by then every case was sent, so
+the run is only marked invalid. This is best effort, not a sandbox. A test puts
+shims of `rm`, `git`, `psql` and the rest first in PATH while the whole corpus
+goes through.
 
 **The contract is documented, pinned and dated.** The classification follows
 the Claude Code hooks page, read on the date in `src/classify.js` and in every
@@ -134,8 +137,11 @@ not emulate that.
 
 ## Threat model
 
-- **The hook runs what it receives.** Canary before and after the run, and a
-  test with a fixture hook that does exactly that.
+- **The hook runs what it receives.** Canary before and after the run, with a
+  one-second wait for background execution, and tests with fixture hooks that
+  run it at once, a moment later from another process group, and on a later
+  call. A hook that runs only some commands, or waits longer, is not caught;
+  for an untrusted hook, use a container or a VM.
 - **Third-party `--cases`.** Data only, never interpolated into a shell; the
   PATH tripwire test proves it for the whole corpus, newlines and quotes
   included.
@@ -166,6 +172,9 @@ not emulate that.
   Windows is not supported.
 - The guard sees your real cwd and environment: guards that inspect the disk or
   git give results that depend on where you run the bench.
+- The canary is best effort: it catches a hook that runs every command, at once
+  or within a second. It does not catch one that runs only some commands or
+  waits longer, and a late catch comes after every case was sent.
 - Obfuscation is endless: passing the corpus does not prove a guard cannot be
   evaded.
 - With 89 cases, each case weighs more than one point of a rate: look at which

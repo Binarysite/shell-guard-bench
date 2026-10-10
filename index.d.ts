@@ -217,6 +217,8 @@ export function runBench(opts: {
   permissionMode?: PermissionMode;
   onFailure?: OnFailure;
   acceptRewrites?: boolean;
+  /** How long to wait after the canaries and after the last case for a delayed execution, default 1000. */
+  canaryGraceMs?: number;
   onResult?: (r: CaseResult) => void;
 }): Promise<BenchRun>;
 
