@@ -68,10 +68,12 @@ group) and removes the temporary directory before the bench exits.
 Claude Code runs them on macOS and Linux; Windows uses Git Bash or PowerShell
 there, and v0.1 does not emulate either.
 
-**No third-party scores in the repo.** Measuring a published guard and
-committing the number invites a dispute over versions and configuration. The
-bench makes the measurement reproducible; publishing it is the guard author's
-call.
+**A third-party score is published only pinned and reproducible.** Measuring a
+published guard invites a dispute over versions and configuration, so the README
+reports one guard at one pinned version, with default settings, an empty config
+home and a throwaway working directory. The JSON report is committed, a test ties
+the README table to it, and the numbers are scoped to the guard's own stated
+promise. No issue or claim is opened on the guard's repository.
 
 ## Hook contract
 
@@ -210,8 +212,8 @@ not emulate that.
 - `--from-settings`: read the Bash hooks from the settings files and emulate the
   precedence between them.
 - Other agents, once their hook contract is documented.
-- A reproducible matrix of public guards at pinned versions, after talking to
-  their maintainers.
+- More public guards in the matrix, each at a pinned version with its report
+  committed, as cc-safety-net 2.6.7 is today.
 
 ## Layout
 

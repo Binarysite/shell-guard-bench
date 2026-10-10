@@ -30,7 +30,8 @@ may need both updated, on purpose.
 - Node 22+, ESM, no runtime dependencies. `npm ci` installs only TypeScript and
   the Node types, for the type checks.
 - Before a pull request: `npm run lint`, `npm run typecheck`,
-  `npm run typecheck:types`, `npm test` and `npm run example`.
+  `npm run typecheck:types`, `npm run coverage` (the tests, with thresholds of 95%
+  lines, 90% branches and 95% functions) and `npm run example`.
 - If the Claude Code hooks contract changed, update `src/classify.js`, its
   tests, `CONTRACT.checked` and the table in `docs/DESIGN.md` in the same
   change, with a link to the docs.

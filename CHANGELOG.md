@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- README: the first screen leads with the chained `rm -rf ~` question, the example
+  shows both toy guards, and a Measured guards section reports cc-safety-net 2.6.7
+  with its committed JSON report.
+- `npm run coverage` gates CI on 95% lines, 90% branches and 95% functions.
+- `npm run lint` rejects em dashes. `npm run example` prints three leaks per run.
+
 ## 0.1.0 (2026-10-09)
 
 First release.
