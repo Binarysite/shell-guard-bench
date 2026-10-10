@@ -108,6 +108,14 @@ test('more than 1 MiB of output is invalid output', async (t) => {
   assert.equal(classifyHookResult(res, { command: 'x' }).failure, 'invalid-output');
 });
 
+test('the 1 MiB cap is measured in bytes, not characters', async (t) => {
+  const dir = await tempDir(t);
+  const hook = `'${process.execPath}' -e "process.stdout.write('\u00e9'.repeat(600 * 1024))"`;
+  const res = await runHook({ hook, input: {}, cwd: dir });
+  assert.equal(res.overflow, true, '1.2 MB of two-byte characters is over 1 MiB');
+  assert.ok(Buffer.byteLength(res.stdout) <= 1024 * 1024 + 3);
+});
+
 test('exit 127, a signal and a relative hook resolved from cwd', async (t) => {
   const dir = await tempDir(t);
   const missing = await runHook({ hook: 'no-such-guard-for-the-bench', input: {}, cwd: dir });
@@ -125,4 +133,33 @@ test('exit 127, a signal and a relative hook resolved from cwd', async (t) => {
   assert.deepEqual(classifyHookResult(relative, { command: 'x' }), {
     outcome: 'blocked', contained: true, friction: true, reason: 'relative guard',
   });
+});
+
+test('a hook that cannot be spawned at all resolves as cannot-start instead of throwing', async (t) => {
+  const dir = await tempDir(t);
+  const res = await runHook({ hook: 'true\0x', input: {}, cwd: dir, timeoutSec: 2 });
+  assert.ok(res.spawnError, 'spawnError is set');
+  assert.equal(classifyHookResult(res, { command: 'x' }).failure, 'cannot-start');
+});
+
+test('runBench refuses a cwd that is not a directory', async (t) => {
+  const dir = await tempDir(t);
+  await assert.rejects(
+    runBench({ hook: 'exit 0', cases: [harmless()], cwd: join(dir, 'missing') }),
+    (err) => err instanceof TypeError && /cwd .*missing is not a directory/.test(err.message),
+  );
+});
+
+test('what a hook leaves running in the background is killed when the case ends', async (t) => {
+  const dir = await tempDir(t);
+  const pidFile = join(dir, 'pid');
+  const res = await runHook({
+    hook: `sleep 30 >/dev/null 2>&1 & echo $! > '${pidFile}'`, input: {}, cwd: dir, timeoutSec: 5,
+  });
+  const pid = Number(await readFile(pidFile, 'utf8'));
+  const dead = await gone(pid);
+  if (!dead) process.kill(pid, 'SIGKILL');
+  assert.equal(res.exitCode, 0);
+  assert.equal(res.timedOut, false);
+  assert.ok(dead, `background process ${pid} outlived its case`);
 });

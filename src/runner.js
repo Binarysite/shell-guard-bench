@@ -3,7 +3,8 @@
 // JSON; it is never part of a shell string.
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { rmSync } from 'node:fs';
+import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SetupError, canaryAfter, canaryBefore } from './canary.js';
@@ -11,7 +12,7 @@ import { classifyHookResult, firstLine } from './classify.js';
 import { validateCases } from './corpus.js';
 
 export const RUN_DEFAULTS = Object.freeze({ timeoutSec: 10, permissionMode: 'default', onFailure: 'continue' });
-/** Output kept per stream; more than this is invalid output. */
+/** Bytes kept per stream; more than this is invalid output. */
 export const MAX_OUTPUT = 1024 * 1024;
 /** After the kill, how long to wait for the streams to close before giving up on the process. */
 export const REAP_GRACE_MS = 2000;
@@ -47,6 +48,12 @@ export function hookEnv(cwd, base = process.env) {
   return env;
 }
 
+/** @param {string} path */
+export const isDirectory = (path) => stat(path).then((s) => s.isDirectory(), () => false);
+
+/** Process groups of the hooks running right now, for the signal handler of runBench. */
+const running = new Set();
+
 /** Kills the hook's whole process group; it may already be gone. */
 function killGroup(pid) {
   try {
@@ -60,29 +67,39 @@ function killGroup(pid) {
  * Runs `hook` with `/bin/sh -c` in its own process group and feeds it `input`.
  * Never throws and never hangs: on timeout the group is killed, and if the streams
  * still do not close (a process in uninterruptible I/O, or a grandchild in another
- * session holding stdout) it gives up after REAP_GRACE_MS and says so.
+ * session holding stdout) it gives up after REAP_GRACE_MS and says so. When the case
+ * ends, anything the hook left running in its group is killed too.
  * @param {{ hook: string, input: object, cwd: string, timeoutSec?: number, env?: NodeJS.ProcessEnv }} opts
  */
 export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec, env = hookEnv(cwd) }) {
   const started = Date.now();
   return new Promise((resolve) => {
-    const out = { stdout: '', stderr: '' };
+    /** Raw bytes per stream, decoded once at the end so a cut never splits the count. */
+    const chunks = { stdout: [], stderr: [] };
+    const bytes = { stdout: 0, stderr: 0 };
     const raw = {
       exitCode: null, signal: null, timedOut: false, overflow: false, unreapable: false,
       spawnError: undefined, stdout: '', stderr: '', durationMs: 0,
     };
     let settled = false;
+    let child;
+    let timer;
     let reapTimer;
     const finish = () => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       clearTimeout(reapTimer);
-      Object.assign(raw, out, { durationMs: Date.now() - started });
+      // Whatever the hook left running in its group (a `cmd &`) goes with it.
+      if (child?.pid) {
+        killGroup(child.pid);
+        running.delete(child.pid);
+      }
+      for (const name of /** @type {const} */ (['stdout', 'stderr'])) raw[name] = Buffer.concat(chunks[name]).toString('utf8');
+      raw.durationMs = Date.now() - started;
       resolve(raw);
     };
 
-    let child;
     try {
       child = spawn('/bin/sh', ['-c', hook], { cwd, env, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     } catch (err) {
@@ -90,6 +107,7 @@ export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec
       finish();
       return;
     }
+    if (child.pid) running.add(child.pid);
 
     const giveUp = () => {
       killGroup(child.pid);
@@ -100,19 +118,19 @@ export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec
         finish();
       }, REAP_GRACE_MS);
     };
-    const timer = setTimeout(() => {
+    timer = setTimeout(() => {
       raw.timedOut = true;
       giveUp();
     }, timeoutSec * 1000);
 
     for (const name of /** @type {const} */ (['stdout', 'stderr'])) {
-      child[name].setEncoding('utf8');
-      child[name].on('data', (chunk) => {
+      child[name].on('data', (/** @type {Buffer} */ chunk) => {
         if (raw.overflow) return;
-        out[name] += chunk;
-        if (out[name].length > MAX_OUTPUT) {
+        const room = MAX_OUTPUT - bytes[name];
+        chunks[name].push(chunk.length > room ? chunk.subarray(0, room) : chunk);
+        bytes[name] += chunk.length;
+        if (bytes[name] > MAX_OUTPUT) {
           raw.overflow = true;
-          out[name] = out[name].slice(0, MAX_OUTPUT);
           clearTimeout(timer);
           giveUp();
         }
@@ -150,6 +168,7 @@ export async function runBench(opts) {
   if (!opts.cases?.length) throw new SetupError('no-cases', 'no cases to run');
   validateCases(opts.cases, 'cases');
   const cwd = resolve(opts.cwd ?? process.cwd());
+  if (!(await isDirectory(cwd))) throw new TypeError(`cwd ${cwd} is not a directory`);
   const timeoutSec = opts.timeoutSec ?? RUN_DEFAULTS.timeoutSec;
   if (!(timeoutSec > 0)) throw new RangeError('timeoutSec must be greater than 0');
   const permissionMode = opts.permissionMode ?? RUN_DEFAULTS.permissionMode;
@@ -158,6 +177,21 @@ export async function runBench(opts) {
   const startedAt = new Date().toISOString();
 
   const dir = await mkdtemp(join(tmpdir(), 'shell-guard-bench-'));
+  // The hook runs in its own process group, so Ctrl+C on the terminal does not reach
+  // it. On SIGINT or SIGTERM, kill it, remove the temporary directory, and let the
+  // signal do what it would have done (unless someone else is listening for it).
+  const onSignal = (signal) => {
+    for (const pid of running) killGroup(pid);
+    rmSync(dir, { recursive: true, force: true });
+    stopListening();
+    if (process.listenerCount(signal) === 0) process.kill(process.pid, signal);
+  };
+  const stopListening = () => {
+    process.off('SIGINT', onSignal);
+    process.off('SIGTERM', onSignal);
+  };
+  process.once('SIGINT', onSignal);
+  process.once('SIGTERM', onSignal);
   try {
     const transcriptPath = join(dir, 'transcript.jsonl');
     await writeFile(transcriptPath, '');
@@ -205,6 +239,7 @@ export async function runBench(opts) {
       cases: opts.cases, results, invalid: canaryAfter(dir),
     };
   } finally {
+    stopListening();
     await rm(dir, { recursive: true, force: true });
   }
 }

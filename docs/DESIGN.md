@@ -55,7 +55,10 @@ group (`detached: true`). On timeout the whole group gets SIGKILL. If the
 streams still do not close after 2 s (a process stuck in uninterruptible I/O on
 a dead network mount, or a grandchild in another session holding stdout) the
 bench stops waiting, marks the case `unreapable` and moves on. The bench itself
-never hangs.
+never hangs. The group is also killed when a case ends normally, so a `cmd &`
+the hook leaves behind does not pile up over a run. Ctrl+C or SIGTERM on the bench
+kills the group of the running hook (which is outside the terminal's process
+group) and removes the temporary directory before the bench exits.
 
 **Zero dependencies, POSIX only.** `node:child_process`, `node:fs`,
 `node:crypto` and `node:util` cover everything. Hooks run with `sh -c`, as

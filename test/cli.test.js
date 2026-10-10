@@ -29,6 +29,8 @@ test('usage errors exit 2 with a message', async () => {
     [['--hook', 'exit 0', '--permission-mode', 'yolo'], /--permission-mode must be one of default, plan/],
     [['--hook', 'exit 0', '--on-failure', 'maybe'], /--on-failure must be continue or block/],
     [['--hook', 'exit 0', '--only', 'nothing-like-this'], /--only "nothing-like-this" matches no category/],
+    [['--hook', 'exit 0', '--cwd', '/nonexistent-dir-for-the-bench'], /--cwd \/nonexistent-dir-for-the-bench is not a directory/],
+    [['--hook', 'exit 0', '--cwd', 'package.json'], /--cwd package\.json is not a directory/],
   ];
   for (const [args, message] of cases) {
     await assert.rejects(cli(...args), (err) => err.code === 2 && message.test(err.stderr), args.join(' '));
@@ -69,4 +71,38 @@ test('setup errors exit 2: a hook that runs its input, a hook that fails', async
     cli('--hook', 'exit 1', '--only', 'privilege'),
     (err) => err.code === 2 && /would fail open on every call/.test(err.stderr),
   );
+});
+
+test('Ctrl+C or SIGTERM kills the running hook and removes the temporary directory', async (t) => {
+  const { spawn } = await import('node:child_process');
+  const { mkdir, readdir } = await import('node:fs/promises');
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    const dir = await tempDir(t);
+    const tmp = join(dir, 'tmp');
+    await mkdir(tmp);
+    const pidFile = join(dir, 'pid');
+    const bench = spawn(process.execPath, ['bin/guard-bench.js', '--hook', `sleep 30 & echo $! > '${pidFile}'; wait`,
+      '--only', 'privilege', '--out', join(dir, 'r.json')], { cwd: root, env: { ...process.env, TMPDIR: tmp }, stdio: 'ignore' });
+    const ended = new Promise((done) => bench.on('exit', (code, sig) => done({ code, sig })));
+    let pid = 0;
+    for (let i = 0; i < 100 && !pid; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      pid = Number(await readFile(pidFile, 'utf8').catch(() => '0'));
+    }
+    assert.ok(pid, 'the hook started');
+    bench.kill(signal);
+    assert.deepEqual(await ended, { code: null, sig: signal });
+    let alive = true;
+    for (let i = 0; i < 40 && alive; i++) {
+      try {
+        process.kill(pid, 0);
+        await new Promise((r) => setTimeout(r, 50));
+      } catch {
+        alive = false;
+      }
+    }
+    if (alive) process.kill(pid, 'SIGKILL');
+    assert.equal(alive, false, `${signal}: the hook's child ${pid} outlived the bench`);
+    assert.deepEqual(await readdir(tmp), [], `${signal}: temporary directory left behind`);
+  }
 });

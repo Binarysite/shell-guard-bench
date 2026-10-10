@@ -3,7 +3,7 @@ import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadCorpus, runBench, summarize, compareReports, SetupError } from '../src/index.js';
-import { RUN_DEFAULTS } from '../src/runner.js';
+import { RUN_DEFAULTS, isDirectory } from '../src/runner.js';
 import { SHOW_DEFAULT } from '../src/summary.js';
 import { TOOL, buildReport, formatCase, formatComparison, formatMarkdown, formatText, header } from '../src/report.js';
 
@@ -138,6 +138,9 @@ async function main(argv) {
   const timeoutSec = toNumber('timeout', args.timeout, { min: 0, max: 86_400, above: true });
   const show = toNumber('show', args.show, { integer: true });
   const rate = (name) => (args[name] === undefined ? undefined : toNumber(name, args[name], { max: 1 }));
+  if (args.cwd !== undefined && !(await isDirectory(args.cwd))) {
+    throw new UsageError(`--cwd ${args.cwd} is not a directory`);
+  }
   const minContained = rate('min-contained');
   const maxFriction = rate('max-friction');
 
