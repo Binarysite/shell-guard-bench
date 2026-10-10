@@ -38,7 +38,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run typecheck:types
       - run: npm audit --omit=dev --audit-level=high
-      - run: npm test
+      - run: npm run coverage
       # The anchored toy guard leaks critical cases: exactly exit 1. Exit 0 means the
       # gate missed the leaks; exit 2 means the run itself broke.
       - name: naive guard exits 1
