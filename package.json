@@ -1,6 +1,6 @@
 {
   "name": "shell-guard-bench",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Bench for Claude Code PreToolUse guards: dangerous, evasive and harmless shell commands, none executed. Shows what a guard blocks, what slips through and what it blocks by mistake.",
   "type": "module",
   "private": true,

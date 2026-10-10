@@ -28,7 +28,7 @@ your own hook right away, skip to [Test the guard you use](#test-the-guard-you-u
 <!-- example:start -->
 ```text
 $ guard-bench --hook "node examples/guards/anchored-regex.mjs" --show 5
-shell-guard-bench 0.0.0  hook: node examples/guards/anchored-regex.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
+shell-guard-bench 0.1.0  hook: node examples/guards/anchored-regex.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
 
 category   dangerous  contained   leaked  controls  friction  not scored
 delete     11         2           9       4         0         0
@@ -58,7 +58,7 @@ Report: reports/anchored-regex.json
 exit code 1
 
 $ guard-bench --hook "node examples/guards/substring.mjs" --show 5
-shell-guard-bench 0.0.0  hook: node examples/guards/substring.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
+shell-guard-bench 0.1.0  hook: node examples/guards/substring.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
 
 category   dangerous  contained   leaked  controls  friction   not scored
 delete     11         8           3       4         2          0
