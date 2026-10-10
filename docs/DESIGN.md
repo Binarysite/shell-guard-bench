@@ -105,7 +105,9 @@ when it is not set. Default timeout 10 s (`--timeout`, in seconds, like
 `timeout` in settings.json; Claude Code's own default is 600 s).
 
 **Decision table.** stdout is parsed as JSON only when, trimmed, it starts with
-`{` and ends with `}`.
+`{` and ends with `}`. Two or more lines that each parse as JSON on their own are
+plain text, unless one of them is an object that sets a known field: then the
+whole output is invalid.
 
 | stdout | exit 0 | exit 2 | other exit or signal |
 |---|---|---|---|
@@ -125,10 +127,11 @@ and is reported as legacy. `defer` is honored only in non-interactive `-p` runs
 and ignored in interactive sessions, so it counts as not contained.
 
 **Schema** (what makes JSON invalid): the output is a plain object;
-`hookSpecificOutput`, when present, is an object; `hookEventName`, when present,
-is `"PreToolUse"`; `permissionDecision` is one of allow, deny, ask, defer;
-`permissionDecisionReason`, `reason`, `stopReason` and `systemMessage` are
-strings; `updatedInput` is an object; `continue` and `suppressOutput` are
+`hookSpecificOutput`, when present, is an object with `hookEventName` set to
+`"PreToolUse"` (the docs say it is required; the bench follows them literally
+and has not checked what the Claude Code binary does without it); `permissionDecision` is one of allow, deny, ask, defer;
+`permissionDecisionReason`, `reason`, `stopReason`, `systemMessage` and
+`terminalSequence` are strings; `updatedInput` is an object; `continue` and `suppressOutput` are
 booleans; `decision` is approve or block. Unknown keys are ignored.
 
 **Several hooks.** Claude Code runs all matching hooks in parallel with the
@@ -146,8 +149,10 @@ not emulate that.
   PATH tripwire test proves it for the whole corpus, newlines and quotes
   included.
 - **The hook hangs or forks.** Process-group kill and a hard deadline.
-- **The hook floods its output.** Capture stops at 1 MiB per stream and the case
-  is invalid output.
+- **The hook floods its output.** The bench keeps at most 1 MiB per stream (its
+  own limit; the docs set none) and reads and drops the rest, so the hook is not
+  stuck on a full pipe and its exit code still decides: exit 2 blocks. A stdout
+  cut at the limit is read as plain text, which the docs say is not a failure.
 - **The reports.** They keep the hook command and the first line of stderr, never
   the environment, the working directory or full output.
 - **Supply chain.** Zero runtime dependencies, GitHub Actions pinned by SHA,

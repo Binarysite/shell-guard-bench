@@ -10,8 +10,9 @@ export const CONTRACT = Object.freeze({
 
 export const DECISIONS = Object.freeze(['allow', 'deny', 'ask', 'defer']);
 export const LEGACY_DECISIONS = Object.freeze({ approve: 'allow', block: 'deny' });
-const STRING_FIELDS = ['reason', 'stopReason', 'systemMessage'];
+const STRING_FIELDS = ['reason', 'stopReason', 'systemMessage', 'terminalSequence'];
 const BOOLEAN_FIELDS = ['continue', 'suppressOutput'];
+const KNOWN_FIELDS = [...STRING_FIELDS, ...BOOLEAN_FIELDS, 'decision', 'hookSpecificOutput'];
 
 /**
  * @param {unknown} v
@@ -39,7 +40,9 @@ export function schemaError(out) {
   if (!('hookSpecificOutput' in o)) return null;
   const h = o.hookSpecificOutput;
   if (!isObject(h)) return 'hookSpecificOutput must be an object';
-  if ('hookEventName' in h && h.hookEventName !== 'PreToolUse') {
+  // The docs: hookSpecificOutput "requires a hookEventName field set to the event name".
+  if (!('hookEventName' in h)) return 'hookSpecificOutput requires hookEventName "PreToolUse"';
+  if (h.hookEventName !== 'PreToolUse') {
     return `hookEventName must be "PreToolUse", got ${JSON.stringify(h.hookEventName)}`;
   }
   if ('permissionDecision' in h && !DECISIONS.includes(/** @type {string} */ (h.permissionDecision))) {
@@ -52,8 +55,19 @@ export function schemaError(out) {
   return null;
 }
 
+/** @param {string} text @returns {unknown} the parsed value, or undefined */
+function tryParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Claude Code parses stdout as JSON only when, trimmed, it starts with { and ends with }.
+ * Two or more lines that each parse on their own are plain text, unless one of them is
+ * an object that sets a known field: then the whole output is a parse failure.
  * @param {string} stdout
  */
 function parseStdout(stdout) {
@@ -64,6 +78,12 @@ function parseStdout(stdout) {
   try {
     value = JSON.parse(text);
   } catch (err) {
+    const lines = text.split('\n').filter((l) => l.trim()).map(tryParse);
+    if (lines.length > 1 && !lines.includes(undefined)) {
+      const setsField = lines.some((l) => isObject(l) && KNOWN_FIELDS.some((k) => k in l));
+      if (!setsField) return { kind: 'text' };
+      return { kind: 'invalid', error: 'several JSON lines, and one of them sets a field' };
+    }
     return { kind: 'invalid', error: `invalid JSON: ${err.message}` };
   }
   const error = schemaError(value);
@@ -133,9 +153,8 @@ export function classifyHookResult(raw, ctx) {
 
   if (raw.spawnError) return failed('cannot-start', raw.spawnError.message);
   if (raw.timedOut) return failed('timeout', 'timed out');
-  if (raw.overflow) return failed('invalid-output', 'output larger than 1 MiB');
-
-  const parsed = parseStdout(raw.stdout);
+  // stdout cut at the bench's 1 MiB limit cannot be read as a whole: plain text.
+  const parsed = raw.overflow ? { kind: 'text' } : parseStdout(raw.stdout);
   // Exit 2 blocks even with JSON on stdout, even a permissionDecision of "allow".
   if (raw.exitCode === 2) {
     return { outcome: 'blocked', contained: true, friction: true, ...(stderr ? { reason: stderr } : {}) };

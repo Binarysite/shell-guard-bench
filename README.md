@@ -144,7 +144,8 @@ Each case ends in one outcome, decided by the documented
 
 A crashing, slow or invalid hook lets the command run (Claude Code's default `onFailure: continue`); rerun with
 `--on-failure block` to see your exposure. A common finding of that kind: `"permissionDecision": "block"`, the old
-value in the new field, is invalid output, so the command goes through.
+value in the new field, is invalid output, so the command goes through. So is a `hookSpecificOutput` without
+`hookEventName`, which the docs require.
 
 The gate fails when any critical case leaks. Rates only gate when you ask for it, with `--min-contained 0.9` or
 `--max-friction 0.1`: the corpus encodes a baseline policy and a default bar would be arbitrary. A guard that

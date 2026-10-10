@@ -61,7 +61,7 @@ export interface RawHookResult {
   signal: string | null;
   timedOut: boolean;
   spawnError?: Error;
-  /** stdout or stderr went over 1 MiB. */
+  /** stdout went over 1 MiB: it was cut and is read as plain text. */
   overflow?: boolean;
   stdout: string;
   stderr: string;

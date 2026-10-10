@@ -12,7 +12,7 @@ import { classifyHookResult, firstLine } from './classify.js';
 import { validateCases } from './corpus.js';
 
 export const RUN_DEFAULTS = Object.freeze({ timeoutSec: 10, permissionMode: 'default', onFailure: 'continue' });
-/** Bytes kept per stream; more than this is invalid output. */
+/** Bytes kept per stream; stdout cut at this limit is read as plain text. A bench choice, not from the docs. */
 export const MAX_OUTPUT = 1024 * 1024;
 /** After the kill, how long to wait for the streams to close before giving up on the process. */
 export const REAP_GRACE_MS = 2000;
@@ -124,16 +124,13 @@ export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec
     }, timeoutSec * 1000);
 
     for (const name of /** @type {const} */ (['stdout', 'stderr'])) {
+      // Past the cap the rest is read and dropped, so the hook is not blocked on a
+      // full pipe and its exit code still decides.
       child[name].on('data', (/** @type {Buffer} */ chunk) => {
-        if (raw.overflow) return;
         const room = MAX_OUTPUT - bytes[name];
-        chunks[name].push(chunk.length > room ? chunk.subarray(0, room) : chunk);
+        if (room > 0) chunks[name].push(chunk.length > room ? chunk.subarray(0, room) : chunk);
         bytes[name] += chunk.length;
-        if (bytes[name] > MAX_OUTPUT) {
-          raw.overflow = true;
-          clearTimeout(timer);
-          giveUp();
-        }
+        if (name === 'stdout' && bytes[name] > MAX_OUTPUT) raw.overflow = true;
       });
     }
     child.on('error', (err) => {

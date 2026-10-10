@@ -72,11 +72,22 @@ const ROWS = [
   ['{} is passthrough', raw(0, '{}'), {}, { outcome: 'passthrough' }],
   ['no output is passthrough', raw(0, ''), {}, { outcome: 'passthrough' }],
   ['a JSON array is plain text', raw(0, '[1]'), {}, { outcome: 'passthrough' }],
+  ['hookSpecificOutput without hookEventName is invalid, as the docs require it',
+    raw(0, JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny' } })), {},
+    { outcome: 'failed', failure: 'invalid-output', reason: 'hookSpecificOutput requires hookEventName "PreToolUse"' }],
   ['wrong hookEventName is invalid', raw(0, JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse' } })),
     {}, { outcome: 'failed', failure: 'invalid-output' }],
   ['a hook that cannot start is a failure', raw(null, '', { spawnError: new Error('spawn ENOENT') }), {},
     { outcome: 'failed', failure: 'cannot-start' }],
-  ['output over the limit is invalid', raw(0, DENY, { overflow: true }), {}, { outcome: 'failed', failure: 'invalid-output' }],
+  ['JSON lines that set no field are plain text', raw(0, '{"x":1}\n{"y":2}\n'), { onFailure: 'block' },
+    { outcome: 'passthrough', contained: false }],
+  ['JSON lines where one sets a field are invalid', raw(0, `{"x":1}\n${DENY}`), {},
+    { outcome: 'failed', failure: 'invalid-output' }],
+  ['stdout over the limit is plain text: exit 0 decides nothing', raw(0, DENY, { overflow: true }), {},
+    { outcome: 'passthrough', contained: false }],
+  ['stdout over the limit with exit 2 is blocked', raw(2, DENY, { overflow: true }), {}, { outcome: 'blocked' }],
+  ['stdout over the limit with exit 1 is a failure', raw(1, DENY, { overflow: true }), {},
+    { outcome: 'failed', failure: 'exit-code' }],
 ];
 
 for (const [name, result, ctx, expected] of ROWS) {

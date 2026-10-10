@@ -99,13 +99,19 @@ test('a hook that never reads stdin is fine, even with a 100 KB command', async 
   assert.equal(classifyHookResult(res, { command: 'x' }).outcome, 'passthrough');
 });
 
-test('more than 1 MiB of output is invalid output', async (t) => {
+test('more than 1 MiB of output is cut, and the exit code still decides', async (t) => {
   const dir = await tempDir(t);
-  const hook = `'${process.execPath}' -e "process.stdout.write('x'.repeat(2 * 1024 * 1024))"`;
-  const res = await runHook({ hook, input: {}, cwd: dir });
-  assert.equal(res.overflow, true);
-  assert.ok(res.stdout.length <= 1024 * 1024);
-  assert.equal(classifyHookResult(res, { command: 'x' }).failure, 'invalid-output');
+  const flood = (stream, code) => `'${process.execPath}' -e "process.${stream}.write('x'.repeat(2 * 1024 * 1024)); `
+    + `process.${stream}.on('finish', () => process.exit(${code})); process.${stream}.end()"`;
+  const out0 = await runHook({ hook: flood('stdout', 0), input: {}, cwd: dir });
+  assert.deepEqual([out0.overflow, out0.exitCode, out0.signal], [true, 0, null], 'the hook is not killed');
+  assert.equal(Buffer.byteLength(out0.stdout), 1024 * 1024);
+  assert.equal(classifyHookResult(out0, { command: 'x' }).outcome, 'passthrough');
+  for (const stream of ['stdout', 'stderr']) {
+    const res = await runHook({ hook: flood(stream, 2), input: {}, cwd: dir });
+    assert.equal(res.exitCode, 2, stream);
+    assert.equal(classifyHookResult(res, { command: 'x' }).outcome, 'blocked', stream);
+  }
 });
 
 test('the 1 MiB cap is measured in bytes, not characters', async (t) => {
