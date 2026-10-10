@@ -17,7 +17,9 @@ really writes, in the form it writes it.
   paths, hosts, names or customers. Use hosts like `app-server` or `nas.local`
   and paths like `/opt/app` or `/srv/stage`.
 - A new critical base case needs its `and`, `semicolon`, `subshell` and `bash-c`
-  variants; the loader refuses the corpus without them.
+  variants; the loader refuses the corpus without them. A variant has the same
+  category and `expect` as its base, so an override of a base replaces its
+  variants too.
 
 Then run `npm test`. `test/example.test.js` pins what the toy guards leak and
 over-block, and `test/readme.test.js` pins the README output, so a corpus change

@@ -1,0 +1,41 @@
+name: Case proposal
+description: A command an agent writes that guards get wrong, in either direction.
+labels: [corpus]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        A bug that makes the bench run a case command is a security issue: report it
+        privately as SECURITY.md says, not here.
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The command, as an agent wrote it. Use made-up paths and hosts (/srv/stage, app-server).
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: expect
+    attributes:
+      label: Expected
+      options:
+        - block (a guard should stop it)
+        - allow (harmless, but guards tend to stop it)
+        - none (the text alone cannot decide)
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What it does, which guard gets it wrong, and the form it takes (chained, inside bash -c, a heredoc...).
+    validations:
+      required: true
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data
+      options:
+        - label: No real paths, hosts, names, customers or secrets.
+          required: true

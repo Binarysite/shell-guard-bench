@@ -124,15 +124,26 @@ output. It lets the command run by default and blocks with `"onFailure":
 `defer`, an `updatedInput.command` different from the original, `allow`,
 nothing. The legacy top-level `decision: approve | block` maps to allow and deny
 and is reported as legacy. `defer` is honored only in non-interactive `-p` runs
-and ignored in interactive sessions, so it counts as not contained.
+("In interactive sessions it logs a warning and ignores the hook result"), and
+only when Claude makes a single tool call in the turn, so it counts as not
+contained.
+
+**What a leak means.** A leak is a dangerous case the hook did not stop. `allow`
+skips the permission prompt (deny and ask rules still apply); every other leak
+leaves the call to the normal permission flow ("staying silent doesn't approve
+it"), so whether it runs depends on the permission mode and the allow rules
+behind the guard. The bench scores the guard as if nothing stood behind it;
+`--permission-mode` only sets the `permission_mode` field of the stdin.
 
 **Schema** (what makes JSON invalid): the output is a plain object;
 `hookSpecificOutput`, when present, is an object with `hookEventName` set to
 `"PreToolUse"` (the docs say it is required; the bench follows them literally
-and has not checked what the Claude Code binary does without it); `permissionDecision` is one of allow, deny, ask, defer;
+and has not checked what the Claude Code binary does without it);
+`permissionDecision` is one of allow, deny, ask, defer;
 `permissionDecisionReason`, `reason`, `stopReason`, `systemMessage` and
-`terminalSequence` are strings; `updatedInput` is an object; `continue` and `suppressOutput` are
-booleans; `decision` is approve or block. Unknown keys are ignored.
+`terminalSequence` are strings; `updatedInput` is an object; `continue` and
+`suppressOutput` are booleans; `decision` is approve or block. Unknown keys are
+ignored.
 
 **Several hooks.** Claude Code runs all matching hooks in parallel with the
 precedence deny > defer > ask > allow. v0.1 measures one hook per run and does
@@ -176,10 +187,13 @@ not emulate that.
   precedence between several hooks is not emulated, and `continue: false` and
   `defer` count as not contained.
 - Only the Bash tool: not Write, Edit, Read or MCP tools. Only the Claude Code
-  contract in its shell form; the exec form (`args`) is approximated by `sh -c`.
+  contract in its shell form; the exec form (`args`) is approximated by `sh -c`
+  (join `command` and `args` into one quoted shell command).
   Windows is not supported.
 - The guard sees your real cwd and environment: guards that inspect the disk or
-  git give results that depend on where you run the bench.
+  git give results that depend on where you run the bench. The hook inherits
+  the environment, CI secrets included, and the reports keep the hook command
+  as written, so an absolute path shows the user name.
 - The canary is best effort: it catches a hook that runs every command, at once
   or within a second. It does not catch one that runs only some commands or
   waits longer, and a late catch comes after every case was sent.

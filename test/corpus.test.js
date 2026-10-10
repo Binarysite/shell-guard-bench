@@ -101,3 +101,12 @@ test('a filter that matches nothing, or leaves nothing, is a setup error', async
   await assert.rejects(loadCorpus({ extra: [broken] }), /broken\.json: invalid JSON/);
   await assert.rejects(loadCorpus({ extra: [join(dir, 'missing.json')] }), /missing\.json: file not found/);
 });
+
+test('replacing a case without its variants says which ids to replace together', async (t) => {
+  const file = join(await tempDir(t), 'team.json');
+  await writeFile(file, JSON.stringify([
+    { id: 'git.push-main', category: 'git', command: 'git push origin master', expect: 'allow', origin: 'common' },
+  ]));
+  await assert.rejects(loadCorpus({ extra: [file] }),
+    /git\.push-main\.refspec: variantOf "git\.push-main" must have the same category and expect; replace both ids together/);
+});

@@ -95,7 +95,7 @@ export function crossCheck(cases, { coverage = false } = {}) {
     const base = byId.get(c.variantOf);
     if (!base) errors.push(`${c.id}: variantOf "${c.variantOf}" does not exist`);
     else if (base.category !== c.category || base.expect !== c.expect) {
-      errors.push(`${c.id}: variantOf "${c.variantOf}" must have the same category and expect`);
+      errors.push(`${c.id}: variantOf "${c.variantOf}" must have the same category and expect; replace both ids together`);
     }
   }
   if (coverage) {

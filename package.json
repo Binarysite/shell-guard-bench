@@ -46,7 +46,9 @@
     "security",
     "benchmark",
     "shell",
-    "cli"
+    "cli",
+    "nodejs",
+    "zero-dependency"
   ],
   "author": "Alfredo Rosadilla",
   "license": "MIT",

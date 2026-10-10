@@ -25,6 +25,12 @@ that triggered it. You should get an answer within a week.
   hook's stderr, reason and rewritten command, never the environment, the
   working directory or full output.
 
+What to know before you run it: the hook inherits the bench's environment,
+secrets of a CI job included, as it would in Claude Code. The reports keep the
+hook command as written, so `--hook "$HOME/..."` puts an absolute path with your
+user name into the JSON, the text and the `--md` summary; in a public CI, use a
+path relative to the repository.
+
 What it cannot do: stop a hook that does harm on its own. The canary is best
 effort: a hook that runs only some commands (say, only the ones that start with
 `rm`), or runs them later than the checks, is not caught. Run the bench against
