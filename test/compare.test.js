@@ -63,3 +63,24 @@ test('compare CLI exits 0 without regressions, 1 with them, 2 on bad input', asy
     && err.stderr.includes(`${future}: not a shell-guard-bench report`));
   await assert.rejects(cli('compare', before), (err) => err.code === 2 && /needs two reports/.test(err.stderr));
 });
+
+test('the library alone goes from corpus to two reports and their comparison', async (t) => {
+  const { loadCorpus, runBench, summarize, buildReport } = await import('../src/index.js');
+  const cwd = await tempDir(t);
+  const { cases } = await loadCorpus({ only: ['privilege'] });
+  const reportOf = async (hook) => {
+    const run = await runBench({ hook, cases, cwd, canaryGraceMs: 0 });
+    return buildReport(run, summarize(run));
+  };
+  const strict = await reportOf('cat > /dev/null; exit 2');
+  const silent = await reportOf('cat > /dev/null');
+  const { regressions, warnings } = compareReports(strict, silent);
+  assert.equal(regressions.length, strict.summary.dangerous);
+  assert.deepEqual(warnings, ['hook changed: "cat > /dev/null; exit 2" -> "cat > /dev/null"']);
+});
+
+test('a long list of ids on one side is cut so the regressions stay visible', () => {
+  const many = Array.from({ length: 70 }, (_, i) => result(`git.c${i}`, 'block', 'blocked', true, true));
+  const { warnings } = compareReports(report(many), report(many.slice(0, 2)));
+  assert.deepEqual(warnings, ['only in before: git.c2, git.c3, git.c4, git.c5, git.c6 and 63 more']);
+});

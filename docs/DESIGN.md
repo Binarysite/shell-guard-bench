@@ -147,7 +147,8 @@ not emulate that.
   for an untrusted hook, use a container or a VM.
 - **Third-party `--cases`.** Data only, never interpolated into a shell; the
   PATH tripwire test proves it for the whole corpus, newlines and quotes
-  included.
+  included. The text and Markdown reports write control characters from cases
+  and hooks as `\uXXXX`, so an escape sequence cannot drive the terminal.
 - **The hook hangs or forks.** Process-group kill and a hard deadline.
 - **The hook floods its output.** The bench keeps at most 1 MiB per stream (its
   own limit; the docs set none) and reads and drops the rest, so the hook is not
@@ -207,6 +208,7 @@ src/canary.js         canary before and after; SetupError
 src/corpus.js         loading, strict validation, overrides, filters, hash
 src/summary.js        metrics and the gate
 src/report.js         text, JSON and Markdown
+src/index.js          the library API: loadCorpus, runBench, summarize, buildReport, compareReports
 src/compare.js        diff of two reports
 src/text.js           first line of a stream, percentages
 corpus/*.json         the eight categories

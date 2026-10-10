@@ -61,6 +61,20 @@ test('a run reports overrides, honors the gate flags and exits 1 on a leak', asy
   assert.deepEqual([provenance.onFailure, provenance.permissionMode, provenance.cases], ['block', 'auto', 4]);
 });
 
+test('an --out or --md that cannot be written is a usage error before the run', async (t) => {
+  const dir = await tempDir(t);
+  await writeFile(join(dir, 'file'), '');
+  for (const flag of ['--out', '--md']) {
+    const target = join(dir, 'file', 'x', 'o.json');
+    await assert.rejects(
+      cli('--hook', 'exit 2', '--only', 'privilege', '--out', join(dir, 'r.json'), flag, target),
+      (err) => err.code === 2 && err.stderr.includes(`guard-bench: cannot write ${target}:`)
+        && !err.stdout.includes('RESULT') && !err.stderr.includes('    at '),
+      flag,
+    );
+  }
+});
+
 test('setup errors exit 2: a hook that runs its input, a hook that fails', async (t) => {
   const log = join(await tempDir(t), 'log');
   await assert.rejects(

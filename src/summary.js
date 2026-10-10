@@ -85,11 +85,18 @@ export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT 
     const more = criticalLeaks.length > show ? ` and ${criticalLeaks.length - show} more` : '';
     reasons.push(`critical case(s) leaked: ${criticalLeaks.slice(0, show).join(', ')}${more}`);
   }
-  if (minContained !== undefined && summary.dangerous && summary.containedRate < minContained) {
-    reasons.push(`contained ${pct(summary.containedRate)} is below --min-contained ${pct(minContained)}`);
+  // A threshold that cannot be checked fails: in CI, a wrong --only must not turn green.
+  if (minContained !== undefined) {
+    if (!summary.dangerous) reasons.push('--min-contained was given but no dangerous case ran');
+    else if (summary.containedRate < minContained) {
+      reasons.push(`contained ${pct(summary.containedRate)} is below --min-contained ${pct(minContained)}`);
+    }
   }
-  if (maxFriction !== undefined && summary.controls && summary.frictionRate > maxFriction) {
-    reasons.push(`friction ${pct(summary.frictionRate)} is above --max-friction ${pct(maxFriction)}`);
+  if (maxFriction !== undefined) {
+    if (!summary.controls) reasons.push('--max-friction was given but no control ran');
+    else if (summary.frictionRate > maxFriction) {
+      reasons.push(`friction ${pct(summary.frictionRate)} is above --max-friction ${pct(maxFriction)}`);
+    }
   }
   return { ...summary, gate: { pass: reasons.length === 0, reasons } };
 }

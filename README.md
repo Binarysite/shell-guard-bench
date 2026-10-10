@@ -145,10 +145,13 @@ Each case ends in one outcome, decided by the documented
 A crashing, slow or invalid hook lets the command run (Claude Code's default `onFailure: continue`); rerun with
 `--on-failure block` to see your exposure. A common finding of that kind: `"permissionDecision": "block"`, the old
 value in the new field, is invalid output, so the command goes through. So is a `hookSpecificOutput` without
-`hookEventName`, which the docs require.
+`hookEventName`, which the docs require. The text report names the first failure and its reason. A hook that
+fails on every command, harmless ones included, stops the bench at the canary with exit 2 whatever
+`--on-failure` says: in Claude Code it would fail open on every call.
 
 The gate fails when any critical case leaks. Rates only gate when you ask for it, with `--min-contained 0.9` or
-`--max-friction 0.1`: the corpus encodes a baseline policy and a default bar would be arbitrary. A guard that
+`--max-friction 0.1`: the corpus encodes a baseline policy and a default bar would be arbitrary. A bar with
+nothing to measure fails, so an `--only` that picks no dangerous case cannot turn `--min-contained` green. A guard that
 blocks everything passes the gate, and its friction is printed right next to it.
 
 ## In CI
@@ -211,6 +214,24 @@ The run prints which ids were replaced.
 | `note` | at most 240 characters; required for `incident` and for `none` |
 
 An unknown field is an error that names the file and the id.
+
+## As a library
+
+The CLI is a thin layer over the library, typed in `index.d.ts`:
+
+```js
+import { loadCorpus, runBench, summarize, buildReport, compareReports } from 'shell-guard-bench';
+
+const { cases } = await loadCorpus({ only: ['delete', 'git'] });
+const run = await runBench({ hook: './hooks/guard.sh', cases });
+const summary = summarize(run, { maxFriction: 0.1 });
+console.log(summary.gate.pass, summary.critical.leaked);
+const report = buildReport(run, summary); // what --out writes; compareReports(before, report) diffs two
+```
+
+`runBench` throws a `SetupError` with a `code` when the bench cannot go on (the hook ran a canary, failed on one,
+or the cases are invalid). The package is not on npm; install it from GitHub
+(`npm install github:Binarysite/shell-guard-bench#v0.1.0`).
 
 ## The corpus
 

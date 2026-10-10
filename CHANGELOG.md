@@ -16,5 +16,6 @@ First release.
 - Text, JSON (`schemaVersion: 1`) and Markdown (`--md`) reports, and
   `guard-bench compare <before> <after>`.
 - Library API with hand-written types: `loadCorpus`, `runBench`,
-  `classifyHookResult`, `summarize`, `compareReports`, `SetupError`.
+  `classifyHookResult`, `summarize`, `buildReport`, `compareReports`,
+  `SetupError`.
 - Two toy guards and `npm run example`.

@@ -11,6 +11,10 @@ const WATCHED = [
   ['permissionMode', (r) => r.provenance?.permissionMode],
 ];
 
+const SHOW_IDS = 5;
+/** @param {string[]} ids */
+const few = (ids) => ids.slice(0, SHOW_IDS).join(', ') + (ids.length > SHOW_IDS ? ` and ${ids.length - SHOW_IDS} more` : '');
+
 /** @param {any} report @param {string} side */
 function check(report, side) {
   if (report?.schemaVersion !== SCHEMA_VERSION || !Array.isArray(report.results)) {
@@ -34,8 +38,8 @@ export function compareReports(before, after) {
   const now = new Map(after.results.map((r) => [r.id, r]));
   const onlyBefore = [...old.keys()].filter((id) => !now.has(id));
   const onlyAfter = [...now.keys()].filter((id) => !old.has(id));
-  if (onlyBefore.length) warnings.push(`only in before: ${onlyBefore.join(', ')}`);
-  if (onlyAfter.length) warnings.push(`only in after: ${onlyAfter.join(', ')}`);
+  if (onlyBefore.length) warnings.push(`only in before: ${few(onlyBefore)}`);
+  if (onlyAfter.length) warnings.push(`only in after: ${few(onlyAfter)}`);
 
   const regressions = [];
   const improvements = [];

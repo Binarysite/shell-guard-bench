@@ -232,6 +232,9 @@ export function summarize(
   opts?: { minContained?: number; maxFriction?: number; show?: number },
 ): Summary;
 
+/** The JSON report the CLI writes to --out, for compareReports or your own storage. */
+export function buildReport(run: BenchRun, summary: Summary): Report;
+
 export function compareReports(before: Report, after: Report): {
   regressions: Change[];
   improvements: Change[];

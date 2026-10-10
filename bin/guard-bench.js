@@ -52,6 +52,15 @@ function toNumber(name, value, { min = 0, max = Infinity, integer = false, above
   return n;
 }
 
+/** Runs a write and turns its failure into a usage error that names the file. */
+async function writing(file, write) {
+  try {
+    await write();
+  } catch (err) {
+    throw new UsageError(`cannot write ${file}: ${err.message}`);
+  }
+}
+
 const list = (value) => (value ? value.split(',').map((s) => s.trim()).filter(Boolean) : []);
 
 async function readReport(file) {
@@ -142,6 +151,10 @@ async function main(argv) {
   const minContained = rate('min-contained');
   const maxFriction = rate('max-friction');
 
+  // Fail on an unwritable report before the run, not after it printed a result.
+  await writing(args.out, () => mkdir(dirname(resolve(args.out)), { recursive: true }));
+  if (args.md) await writing(args.md, () => appendFile(args.md, ''));
+
   const { cases, overridden } = await loadCorpus({ extra: args.cases, only: list(args.only), skip: list(args.skip) });
   const verbose = args.verbose ? (r) => console.log(formatCase(r)) : undefined;
   console.log(header({ hook: args.hook, results: cases }));
@@ -161,9 +174,8 @@ async function main(argv) {
   if (verbose) console.log('');
   console.log(formatText(run, summary, { out: args.out, withHeader: false }));
 
-  await mkdir(dirname(resolve(args.out)), { recursive: true });
-  await writeFile(args.out, `${JSON.stringify(buildReport(run, summary), null, 2)}\n`);
-  if (args.md) await appendFile(args.md, formatMarkdown(run, summary));
+  await writing(args.out, () => writeFile(args.out, `${JSON.stringify(buildReport(run, summary), null, 2)}\n`));
+  if (args.md) await writing(args.md, () => appendFile(args.md, formatMarkdown(run, summary)));
   console.log(`Report: ${args.out}`);
   if (run.invalid) return 2;
   return summary.gate.pass ? 0 : 1;

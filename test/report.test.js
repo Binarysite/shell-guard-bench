@@ -50,7 +50,7 @@ test('the text report has no timings, no absolute paths and no color', () => {
   assert.match(text, /LEAKED {6}\[critical\] git\.clean-all {2}cmd git\.clean-all {2}\(failed\)/);
   assert.match(text, /FRICTION {4}git\.mention-grep {2}cmd git\.mention-grep {2}\(blocked: force push\)/);
   assert.match(text, /NOT SCORED {2}git\.push-bare {2}passthrough {2}Depends on the upstream\./);
-  assert.match(text, /Fail-open: 1 case\(s\) failed \(timeout\)/);
+  assert.match(text, /Fail-open: 1 case\(s\) failed \(timeout\);.*\n {2}first: git\.clean-all: timed out\n/);
   assert.match(text, /RESULT: FAIL\n {2}- critical case\(s\) leaked: git\.clean-all$/);
 });
 
@@ -79,4 +79,23 @@ test('the CLI appends to --md instead of overwriting it', async (t) => {
   assert.equal(text.match(/### shell-guard-bench: PASS/g).length, 2);
   const report = JSON.parse(await readFile(out, 'utf8'));
   assert.doesNotMatch(JSON.stringify(report), new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+test('control characters from cases and hooks never reach the terminal or the Markdown raw', () => {
+  const ESC = '\u001b';
+  const run = {
+    ...RUN,
+    hook: `node guard.mjs ${ESC}]0;title\u0007 \`x\``,
+    results: [
+      result('git.a', 'block', 'passthrough', { command: `${ESC}]0;pwned-title\u0007${ESC}[2Jecho hi` }),
+      result('git.b', 'allow', 'blocked', { command: 'ls', reason: `${ESC}[41mRED` }),
+      result('git.c', 'none', 'passthrough', { note: `${ESC}[31mRED\u009b` }),
+    ],
+  };
+  const s = summarize(run);
+  for (const out of [formatText(run, s), formatMarkdown(run, s)]) {
+    assert.doesNotMatch(out, /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/);
+    assert.match(out, /\\u001b\]0;/);
+  }
+  assert.match(formatMarkdown(run, s), /Hook `` node guard\.mjs \\u001b\]0;title\\u0007 `x` ``,/);
 });

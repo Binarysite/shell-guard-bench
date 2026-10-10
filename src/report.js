@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { CONTRACT } from './classify.js';
 import { corpusHash } from './corpus.js';
-import { pct } from './text.js';
+import { pct, printable } from './text.js';
 
 export const TOOL = Object.freeze({
   name: 'shell-guard-bench',
@@ -14,9 +14,18 @@ export const DEMO_LINE = 'One leaks, one cries wolf. Yours is somewhere in betwe
 
 /** The first line of a command or reason for one line of the report, with how many lines were cut. */
 const preview = (text, max = 70) => {
-  const line = String(text).split('\n')[0];
+  const lines = String(text).split('\n');
+  const line = printable(lines[0]);
   const cut = line.length > max ? `${line.slice(0, max - 3)}...` : line;
-  return String(text).includes('\n') ? `${cut} [+${String(text).split('\n').length - 1} lines]` : cut;
+  return lines.length > 1 ? `${cut} [+${lines.length - 1} lines]` : cut;
+};
+
+/** A Markdown code span that holds any text, backticks included. */
+const code = (text) => {
+  const t = printable(text);
+  const longest = Math.max(0, ...(t.match(/`+/g) ?? []).map((m) => m.length));
+  const fence = '`'.repeat(longest + 1);
+  return longest ? `${fence} ${t} ${fence}` : `${fence}${t}${fence}`;
 };
 
 /** Left-aligned columns, two spaces apart. */
@@ -41,7 +50,7 @@ function categoryRows(summary) {
 
 /** @param {{ hook: string, results: unknown[] }} run */
 export function header(run) {
-  return `${TOOL.name} ${TOOL.version}  hook: ${run.hook}  cases: ${run.results.length}`
+  return `${TOOL.name} ${TOOL.version}  hook: ${printable(run.hook)}  cases: ${run.results.length}`
     + `  contract: Claude Code hooks (checked ${CONTRACT.checked})`;
 }
 
@@ -85,9 +94,16 @@ export function formatText(run, summary, { out = 'the JSON report', withHeader =
     + `${r.reason ? `: ${preview(r.reason, 80)}` : ''})`);
   for (const id of summary.notScoredIds) {
     const r = byId.get(id);
-    lines.push(`NOT SCORED  ${r.id}  ${r.outcome}  ${r.note ?? ''}`.trimEnd());
+    lines.push(`NOT SCORED  ${r.id}  ${r.outcome}  ${printable(r.note ?? '')}`.trimEnd());
   }
-  for (const line of [failOpenLine(summary), rewritesLine(run, summary)]) if (line) lines.push(line);
+  const failOpen = failOpenLine(summary);
+  if (failOpen) {
+    // The reason of the first failure, so a schema error does not need the JSON file to be found.
+    const first = byId.get(summary.failOpen.ids[0]);
+    lines.push(failOpen, `  first: ${first.id}: ${preview(first.reason ?? first.failure, 100)}`);
+  }
+  const rewrites = rewritesLine(run, summary);
+  if (rewrites) lines.push(rewrites);
   lines.push(`RESULT: ${summary.gate.pass ? 'PASS' : 'FAIL'}`);
   for (const reason of summary.gate.reasons) lines.push(`  - ${reason}`);
   return lines.join('\n');
@@ -155,7 +171,7 @@ export function formatMarkdown(run, summary) {
   const lines = [
     `### ${TOOL.name}: ${summary.gate.pass ? 'PASS' : 'FAIL'}`,
     '',
-    `Hook \`${run.hook}\`, ${run.results.length} cases, contract checked ${CONTRACT.checked}.`,
+    `Hook ${code(run.hook)}, ${run.results.length} cases, contract checked ${CONTRACT.checked}.`,
     '',
     row(TABLE_HEAD),
     row(TABLE_HEAD.map(() => '---')),
@@ -176,9 +192,9 @@ export function formatMarkdown(run, summary) {
  *   warnings: string[] }} result
  */
 export function formatComparison(result) {
-  const line = (c) => `  ${c.from.padEnd(11)} -> ${c.to.padEnd(11)} ${c.id}${c.severity ? `  [${c.severity}]` : ''}`;
+  const line = (c) => printable(`  ${c.from.padEnd(11)} -> ${c.to.padEnd(11)} ${c.id}${c.severity ? `  [${c.severity}]` : ''}`);
   const lines = [];
-  for (const w of result.warnings) lines.push(`warning: ${w}`);
+  for (const w of result.warnings) lines.push(`warning: ${printable(w)}`);
   if (result.regressions.length) lines.push('Regressions:', ...result.regressions.map(line));
   if (result.improvements.length) lines.push('Improvements:', ...result.improvements.map(line));
   if (!result.regressions.length && !result.improvements.length) lines.push('No case changed side.');

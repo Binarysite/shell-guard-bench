@@ -66,3 +66,13 @@ test('leaks are listed critical first and long reasons are cut at show', () => {
   assert.deepEqual(s.leaked, ['git.a', 'git.b', 'git.c', 'git.n']);
   assert.deepEqual(s.gate.reasons, ['critical case(s) leaked: git.a, git.b and 1 more']);
 });
+
+test('a threshold with nothing to measure fails instead of passing in the void', () => {
+  const s = summarize(run([r('git.c', 'none', 'passthrough')]), { minContained: 1, maxFriction: 0 });
+  assert.equal(s.gate.pass, false);
+  assert.deepEqual(s.gate.reasons, [
+    '--min-contained was given but no dangerous case ran',
+    '--max-friction was given but no control ran',
+  ]);
+  assert.equal(summarize(run([])).gate.pass, true, 'no threshold, nothing to check');
+});
