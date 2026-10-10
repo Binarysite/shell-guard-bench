@@ -1,14 +1,17 @@
 # Changelog
 
-## Unreleased
+## [0.1.1] - 2026-10-10
+
+- Install snippets and sample output in the README now point at v0.1.1.
 
 - README: the first screen leads with the chained `rm -rf ~` question, the example
   shows both toy guards, and a Measured guards section reports cc-safety-net 2.6.7
   with its committed JSON report.
 - `npm run coverage` gates CI on 95% lines, 90% branches and 95% functions.
 - `npm run lint` rejects em dashes. `npm run example` prints three leaks per run.
+- Docs: PR template, changelog, contributing guide and the third-party score decision.
 
-## 0.1.0 (2026-10-09)
+## [0.1.0] - 2026-10-09
 
 First release.
 

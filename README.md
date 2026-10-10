@@ -27,7 +27,7 @@ It runs the bench against the two toy guards in `examples/guards/`, about 19 sec
 <!-- example:start -->
 ```text
 $ guard-bench --hook "node examples/guards/anchored-regex.mjs" --show 3
-shell-guard-bench 0.1.0  hook: node examples/guards/anchored-regex.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
+shell-guard-bench 0.1.1  hook: node examples/guards/anchored-regex.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
 
 category   dangerous  contained   leaked  controls  friction  not scored
 delete     11         2           9       4         0         0
@@ -62,7 +62,7 @@ exit code 1
 <!-- example-2:start -->
 ```text
 $ guard-bench --hook "node examples/guards/substring.mjs" --show 3
-shell-guard-bench 0.1.0  hook: node examples/guards/substring.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
+shell-guard-bench 0.1.1  hook: node examples/guards/substring.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
 
 category   dangerous  contained   leaked  controls  friction   not scored
 delete     11         8           3       4         2          0
@@ -110,7 +110,7 @@ through. The second matches anywhere in the text, so it contains every critical 
 Pass the `command` of the PreToolUse hook from your `settings.json` to `--hook`, as it is written there:
 
 ```bash
-npx --yes github:Binarysite/shell-guard-bench#v0.1.0 --hook "$HOME/.claude/hooks/guard.sh" --cwd "$(mktemp -d)"
+npx --yes github:Binarysite/shell-guard-bench#v0.1.1 --hook "$HOME/.claude/hooks/guard.sh" --cwd "$(mktemp -d)"
 ```
 
 To list the PreToolUse command hooks of a settings file (matcher, a tab, then the command):
@@ -179,7 +179,7 @@ Pin the version and reproduce it; the two temporary directories keep the run awa
 
 ```bash
 CC_SAFETY_NET_HOME="$(mktemp -d)" CC_SAFETY_NET_AUDIT_HOME="$(mktemp -d)" CC_SAFETY_NET_NO_UPDATE_CHECK=1 \
-  npx --yes github:Binarysite/shell-guard-bench#v0.1.0 \
+  npx --yes github:Binarysite/shell-guard-bench#v0.1.1 \
   --hook "npx -y cc-safety-net@2.6.7 hook --coding-cli" --cwd "$(mktemp -d)"
 ```
 
@@ -255,7 +255,7 @@ The reasoning and the trade-offs are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ```yaml
 - name: shell guard bench
-  run: npx --yes github:Binarysite/shell-guard-bench#v0.1.0 --hook "./hooks/guard.sh" --md "$GITHUB_STEP_SUMMARY"
+  run: npx --yes github:Binarysite/shell-guard-bench#v0.1.1 --hook "./hooks/guard.sh" --md "$GITHUB_STEP_SUMMARY"
 ```
 
 `--md` appends a Markdown summary to the file, which is what `GITHUB_STEP_SUMMARY` expects. The report and the
@@ -333,7 +333,7 @@ const report = buildReport(run, summary); // what --out writes; compareReports(b
 
 `runBench` throws a `SetupError` with a `code` when the bench cannot go on (the hook ran a canary, failed on one,
 or the cases are invalid). The package is not on npm; install it from GitHub
-(`npm install github:Binarysite/shell-guard-bench#v0.1.0`).
+(`npm install github:Binarysite/shell-guard-bench#v0.1.1`).
 
 ## The corpus
 
@@ -391,7 +391,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: npx --yes github:Binarysite/shell-guard-bench#v0.1.0 --hook "./hooks/guard.sh" --md "$GITHUB_STEP_SUMMARY"
+      - run: npx --yes github:Binarysite/shell-guard-bench#v0.1.1 --hook "./hooks/guard.sh" --md "$GITHUB_STEP_SUMMARY"
 ```
 
 ## Related work
