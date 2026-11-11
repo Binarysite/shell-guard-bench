@@ -38,8 +38,12 @@ test('every corpus count written in the docs is the real one', async () => {
   assert.match(readme, new RegExp(`This bench throws ${n} dangerous`));
   assert.match(readme, new RegExp(`\\n${n} cases in \`corpus/\``));
   assert.match(readme, new RegExp(`corpus-${n}%20cases`));
-  assert.match(changelog, new RegExp(`- ${n} cases in eight categories`));
-  assert.match(design, new RegExp(`With ${n} cases`));
+  assert.match(changelog, new RegExp(`The corpus grows from 89 to ${n} cases`));
+  const scored = cases.filter((c) => c.category !== 'stall');
+  const dangerous = scored.filter((c) => c.expect === 'block').length;
+  const controls = scored.filter((c) => c.expect === 'allow').length;
+  assert.match(design, new RegExp(`With ${dangerous} scored dangerous cases and ${controls} controls`));
+  assert.match(readme, new RegExp(`The ${controls} harmless controls outside \`stall\``));
 
   const ORIGIN_LABELS = { incident: 'incident', policy: 'policy', variant: 'variants', common: 'common' };
   const row = (name, list) => {
