@@ -222,7 +222,7 @@ command kept as written) are listed once, in
   `defer` count as not contained.
 - Only the Bash tool and the Claude Code contract in its shell form; the exec
   form (`args`) is approximated by `sh -c`. Windows is not supported.
-- With 115 scored dangerous cases and 58 controls, one case moves a rate by about
+- With 123 scored dangerous cases and 60 controls, one case moves a rate by about
   one or two points: the text report prints a 95% Wilson interval next to each
   rate, and `compare` lists which cases changed.
 - A process in uninterruptible I/O cannot be killed: the bench gives up at the
