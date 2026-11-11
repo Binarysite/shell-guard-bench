@@ -18,6 +18,14 @@
 
 ### Added
 
+- Promise maps (`--promise <file>`, `summarize(run, { promise })`): the case ids
+  a guard's own docs say it blocks and allows, with sources and the date read.
+  The summary scores them apart (`summary.promise`) from the bench policy, and
+  lists what leaked outside the promise. Maps for cc-safety-net 2.6.7 at
+  `standard` and `strict` are in `promises/`.
+- cc-safety-net 2.6.7 re-measured against the 190-case corpus at `standard`
+  (its default) and `strict`, isolated, with `--timeout 60`; both reports are
+  in `reports/`.
 - The corpus grows from 89 to 190 cases in ten categories (new: `cloud` and
   `secrets`). Every declared shape now has a case: `||`, newline, backticks,
   `sh -c`, `eval`, `xargs`, line continuation, plus new shapes for flag
@@ -69,7 +77,8 @@ First release.
 - 89 cases in eight categories, with provenance, a coverage rule for critical
   base cases and strict validation. `--cases` adds cases or replaces one by id.
 - Execution canary before and after the run, with a one-second wait for
-  background execution; no case command is ever executed.
+  background execution. The bench never executes a case; a hook that does is
+  caught by this best-effort canary.
 - The hook runs in its own process group, killed at the end of each case, on
   timeout, and on Ctrl+C or SIGTERM. Output is capped at 1 MiB per stream
   without changing the verdict of the exit code.

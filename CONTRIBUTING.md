@@ -25,6 +25,19 @@ Then run `npm test`. `test/example.test.js` pins what the toy guards leak and
 over-block, and `test/readme.test.js` pins the README output, so a corpus change
 may need both updated, on purpose.
 
+## A measured guard
+
+A third-party guard is published only pinned and reproducible:
+
+- Write its promise map in `promises/<guard>-<version>-<level>.json` from the
+  guard's own docs, before the run: `blocks` and `allows` list the case ids
+  its docs cover, `sources` says where they were read, `checked` when. Forms
+  the docs do not state stay out of the map; the bench policy scores them.
+- Run it at an exact version, with the default `--isolate`, an empty working
+  directory, `--timeout 60`, `--record-env` for the variables that configure it
+  and `--promise` for the map. Commit the report in `reports/`.
+- Tie the README row to the report in `test/readme.test.js`.
+
 ## Code
 
 - Node 22+, ESM, no runtime dependencies. `npm ci` installs only TypeScript and

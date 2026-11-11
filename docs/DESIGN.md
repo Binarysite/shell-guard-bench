@@ -9,10 +9,10 @@ catch, and where the code lives. The [README](../README.md) covers running it.
 few ways to tell how well any of them holds. A guard is a policy; a bench is a
 measurement that works for every policy, and it is the part that was missing.
 
-**It measures text and never executes.** A guard only ever sees the text of a
-command, so the text is what the bench sends. Nothing in the corpus runs: the
-command travels inside the stdin JSON and is never part of a shell string. The
-one risk left is a hook that runs what it receives, so three harmless canaries
+**It measures text, and the bench never executes a case.** A guard only ever
+sees the text of a command, so the text is what the bench sends: the command
+travels inside the stdin JSON and is never part of a shell string. A hook that
+executes what it receives is caught by a best-effort canary, not prevented, so three harmless canaries
 go first: two `touch` a file and one runs `rm -rf` on a directory the bench
 created, all on random names in a fresh temporary directory. The bench waits a
 second for a hook that runs them in the background, and if a file appears it
@@ -71,6 +71,15 @@ group) and removes the temporary directory before the bench exits.
 `node:crypto` and `node:util` cover everything. Hooks run with `sh -c`, as
 Claude Code runs them on macOS and Linux; Windows uses Git Bash or PowerShell
 there, and v0.1 does not emulate either.
+
+**A guard is scored twice: against its own promise and against the bench
+policy.** The corpus is wider than any one guard on purpose, so "leaked" alone
+mixes two questions: does the guard keep its word, and does its word cover what
+an agent can break. A promise map (`promises/*.json`) lists the case ids the
+guard's own docs say it blocks and allows, read before the run, with the
+sources and the date. Forms the docs do not state stay out of the map. The
+summary scores the map apart and lists the leaks outside it; the gate does not
+change.
 
 **A third-party score is published only pinned and reproducible.** Measuring a
 published guard invites a dispute over versions and configuration, so the README
