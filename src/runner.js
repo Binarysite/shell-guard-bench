@@ -73,9 +73,13 @@ function killGroup(pid) {
  * still do not close (a process in uninterruptible I/O, or a grandchild in another
  * session holding stdout) it gives up after REAP_GRACE_MS and says so. When the case
  * ends, anything the hook left running in its group is killed too.
- * @param {{ hook: string, input: object, cwd: string, timeoutSec?: number, env?: NodeJS.ProcessEnv }} opts
+ * `spawnImpl` exists for the tests that check every process the bench starts.
+ * @param {{ hook: string, input: object, cwd: string, timeoutSec?: number, env?: NodeJS.ProcessEnv,
+ *   spawnImpl?: typeof spawn }} opts
  */
-export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec, env = hookEnv(cwd) }) {
+export function runHook({
+  hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec, env = hookEnv(cwd), spawnImpl = spawn,
+}) {
   const started = Date.now();
   return new Promise((resolve) => {
     /** Raw bytes per stream, decoded once at the end so a cut never splits the count. */
@@ -105,7 +109,7 @@ export function runHook({ hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec
     };
 
     try {
-      child = spawn('/bin/sh', ['-c', hook], { cwd, env, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+      child = spawnImpl('/bin/sh', ['-c', hook], { cwd, env, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     } catch (err) {
       raw.spawnError = err;
       finish();
@@ -193,7 +197,7 @@ export function toCaseResult(c, raw, verdict) {
  * canary. Throws SetupError when the bench cannot be trusted to go on.
  * @param {{ hook: string, cases: import('../index.js').Case[], cwd?: string, timeoutSec?: number,
  *   permissionMode?: import('../index.js').PermissionMode, onFailure?: 'continue' | 'block',
- *   acceptRewrites?: boolean, canaryGraceMs?: number,
+ *   acceptRewrites?: boolean, canaryGraceMs?: number, spawnImpl?: typeof spawn,
  *   onResult?: (r: import('../index.js').CaseResult) => void }} opts
  * @returns {Promise<import('../index.js').BenchRun>}
  */
@@ -243,7 +247,7 @@ export async function runBench(opts) {
     const env = hookEnv(cwd);
     const judge = async (c, toolUseId) => {
       const input = hookInput(c, { ...ctx, toolUseId });
-      const raw = await runHook({ hook: opts.hook, input, cwd, timeoutSec, env });
+      const raw = await runHook({ hook: opts.hook, input, cwd, timeoutSec, env, spawnImpl: opts.spawnImpl });
       return { raw, verdict: classifyHookResult(raw, { command: c.command, onFailure, acceptRewrites }) };
     };
 

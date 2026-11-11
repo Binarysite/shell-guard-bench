@@ -18,8 +18,11 @@ second for a hook that runs them in the background, and if a file appears it
 stops before any dangerous case is sent. The files are checked again after the
 last case, for a hook that runs things late; by then every case was sent, so
 the run is only marked invalid. This is best effort, not a sandbox. A test puts
-shims of `rm`, `git`, `psql` and the rest first in PATH while the whole corpus
-goes through.
+shims of `rm`, `git`, `psql`, `bash`, `curl` and the rest first in PATH and points
+HOME and TMPDIR at a throwaway directory while the whole corpus goes through, so a
+command that bypasses PATH (`/bin/rm -rf ~`) would hit the fake home. Another test
+records every process the bench starts: each one is `/bin/sh -c <hook>`, and no
+case command appears in any argv.
 
 **The contract is documented, pinned and dated.** The classification follows
 the Claude Code hooks page, read on the date in `src/classify.js` and in every
