@@ -98,3 +98,23 @@ test('the Measured guards tables are the committed cc-safety-net reports and pro
     assert.ok(section.includes(row), `README lacks: ${row}`);
   }
 });
+
+const actionPins = (text) => new Map([...text.matchAll(/uses: (actions\/[\w-]+)@([0-9a-f]{40}) # (v[\d.]+)/g)]
+  .map(([, name, sha, version]) => [name, `${sha} # ${version}`]));
+
+test('every third-party action the README pins is pinned to the same commit as the CI', async () => {
+  const ci = actionPins(await readFile(join(root, '.github/workflows/ci.yml'), 'utf8'));
+  const readme = actionPins(await readFile(join(root, 'README.md'), 'utf8'));
+  assert.ok(readme.size > 0, 'the README pins at least one action');
+  for (const [name, pin] of readme) assert.equal(pin, ci.get(name), `${name} in README vs ci.yml`);
+});
+
+test('the README action example is pinned by commit to the release the CLI example names', async () => {
+  const readme = await readFile(join(root, 'README.md'), 'utf8');
+  assert.doesNotMatch(readme, /uses: Binarysite\/shell-guard-bench@(?![0-9a-f]{40} # v)/, 'the action is pinned by commit SHA');
+  const actionTag = readme.match(/uses: Binarysite\/shell-guard-bench@[0-9a-f]{40} # (v[\d.]+)/)?.[1];
+  const cliTags = [...readme.matchAll(/github:Binarysite\/shell-guard-bench#(v[\d.]+)/g)].map((m) => m[1]);
+  assert.ok(actionTag, 'the README has a pinned action example');
+  assert.ok(cliTags.length > 0, 'the README has a CLI example');
+  for (const tag of cliTags) assert.equal(tag, actionTag, 'the CLI and action examples name one release');
+});

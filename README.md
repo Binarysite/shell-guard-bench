@@ -90,7 +90,7 @@ The composite action runs the bench against a hook in your repository and append
 
 ```yaml
 - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-- uses: Binarysite/shell-guard-bench@v0.2.1
+- uses: Binarysite/shell-guard-bench@9602f308f70005b79c28e472942aa8b395d35512 # v0.2.1
   with:
     hook: ./hooks/guard.sh
     max-friction: '0.1'
@@ -98,7 +98,8 @@ The composite action runs the bench against a hook in your repository and append
 
 Inputs mirror the CLI flags (see [action.yml](action.yml)); outputs are `result`, `exit-code` and `report`.
 Without the action: `npx --yes github:Binarysite/shell-guard-bench#v0.2.1 --hook ./hooks/guard.sh --cwd . --md
-"$GITHUB_STEP_SUMMARY"`. For a ref that cannot move, pin a commit SHA after the `@` or `#`.
+"$GITHUB_STEP_SUMMARY"`. The `uses:` lines are pinned to commit SHAs, so the ref cannot move; pin one after the `#`
+too if you call the CLI directly.
 
 In the CI of the guard itself, compare the base branch with the head:
 
