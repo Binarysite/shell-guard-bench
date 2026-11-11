@@ -6,6 +6,11 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The README action example is pinned by commit SHA (`# v0.2.1`), and a test checks that the README pins
+  match the CI and name the same release as the CLI example.
+
 ## [0.2.1] - 2026-11-11
 
 ### Added
