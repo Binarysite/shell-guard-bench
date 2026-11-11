@@ -18,6 +18,11 @@
 
 ### Added
 
+- A composite GitHub Action (`action.yml`): `uses: Binarysite/shell-guard-bench@v0.2.0`
+  with `hook:` and the CLI flags as inputs, a job summary, and `result`,
+  `exit-code` and `report` outputs. Inputs reach the script through the
+  environment only. This repository's CI runs it against both toy guards and
+  a hook input full of shell metacharacters.
 - Promise maps (`--promise <file>`, `summarize(run, { promise })`): the case ids
   a guard's own docs say it blocks and allows, with sources and the date read.
   The summary scores them apart (`summary.promise`) from the bench policy, and

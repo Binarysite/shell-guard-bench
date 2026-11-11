@@ -1,0 +1,131 @@
+name: shell-guard-bench
+description: >-
+  Run a Claude Code PreToolUse guard against the shell-guard-bench corpus and fail the job on a
+  critical leak. The bench never executes a case; a hook that does is caught by a best-effort canary.
+author: Binarysite
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  hook:
+    description: The hook command, as in settings.json. Run with /bin/sh -c from the cwd input.
+    required: true
+  cwd:
+    description: >-
+      Working directory of the hook. Default "." (the workspace), so a repository-relative hook path
+      works; HOME and the XDG directories stay isolated unless isolate is "false".
+    default: .
+  isolate:
+    description: '"true" (default) points HOME, XDG_CONFIG_HOME and XDG_CACHE_HOME at temporary directories.'
+    default: 'true'
+  cases:
+    description: Extra case files, one path per line.
+    default: ''
+  only:
+    description: Categories or id prefixes to run, comma separated.
+    default: ''
+  skip:
+    description: Categories or id prefixes to skip, comma separated.
+    default: ''
+  promise:
+    description: A promise map (JSON) to score the guard against its own stated scope.
+    default: ''
+  timeout:
+    description: Seconds per case.
+    default: '10'
+  on-failure:
+    description: continue or block, as the hook's onFailure setting.
+    default: continue
+  permission-mode:
+    description: The permission_mode field sent to the hook.
+    default: default
+  min-contained:
+    description: Fail below this share of dangerous cases contained, 0..1.
+    default: ''
+  max-friction:
+    description: Fail above this share of harmless cases blocked or asked, 0..1.
+    default: ''
+  record-env:
+    description: Variable names to list in the report, comma separated; values are never kept.
+    default: ''
+  out:
+    description: Where to write the JSON report.
+    default: shell-guard-bench.json
+  summary:
+    description: '"true" (default) appends a Markdown summary to the job summary.'
+    default: 'true'
+  node-version:
+    description: Node version to set up (22 or later). Empty to use the runner's node.
+    default: '24'
+
+outputs:
+  result:
+    description: pass or fail (the gate), or error (exit 2).
+    value: ${{ steps.bench.outputs.result }}
+  exit-code:
+    description: 0 gate passed, 1 gate failed, 2 usage or setup error.
+    value: ${{ steps.bench.outputs.exit-code }}
+  report:
+    description: Path of the JSON report.
+    value: ${{ steps.bench.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - if: inputs.node-version != ''
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: ${{ inputs.node-version }}
+    - id: bench
+      shell: bash
+      # Every input reaches the script through the environment, never through ${{ }} in
+      # the script text, so a hook or path with quotes or $( ) cannot inject shell code.
+      env:
+        SGB_HOOK: ${{ inputs.hook }}
+        SGB_CWD: ${{ inputs.cwd }}
+        SGB_ISOLATE: ${{ inputs.isolate }}
+        SGB_CASES: ${{ inputs.cases }}
+        SGB_ONLY: ${{ inputs.only }}
+        SGB_SKIP: ${{ inputs.skip }}
+        SGB_PROMISE: ${{ inputs.promise }}
+        SGB_TIMEOUT: ${{ inputs.timeout }}
+        SGB_ON_FAILURE: ${{ inputs.on-failure }}
+        SGB_PERMISSION_MODE: ${{ inputs.permission-mode }}
+        SGB_MIN_CONTAINED: ${{ inputs.min-contained }}
+        SGB_MAX_FRICTION: ${{ inputs.max-friction }}
+        SGB_RECORD_ENV: ${{ inputs.record-env }}
+        SGB_OUT: ${{ inputs.out }}
+        SGB_SUMMARY: ${{ inputs.summary }}
+      run: |
+        set -u
+        args=(--hook "$SGB_HOOK" --cwd "$SGB_CWD" --timeout "$SGB_TIMEOUT" --on-failure "$SGB_ON_FAILURE"
+          --permission-mode "$SGB_PERMISSION_MODE" --out "$SGB_OUT")
+        case "$SGB_ISOLATE" in
+          true) ;;
+          false) args+=(--no-isolate) ;;
+          *) echo "::error::isolate must be true or false"; exit 2 ;;
+        esac
+        while IFS= read -r file; do
+          [ -n "$file" ] && args+=(--cases "$file")
+        done <<< "$SGB_CASES"
+        [ -n "$SGB_ONLY" ] && args+=(--only "$SGB_ONLY")
+        [ -n "$SGB_SKIP" ] && args+=(--skip "$SGB_SKIP")
+        [ -n "$SGB_PROMISE" ] && args+=(--promise "$SGB_PROMISE")
+        [ -n "$SGB_MIN_CONTAINED" ] && args+=(--min-contained "$SGB_MIN_CONTAINED")
+        [ -n "$SGB_MAX_FRICTION" ] && args+=(--max-friction "$SGB_MAX_FRICTION")
+        [ -n "$SGB_RECORD_ENV" ] && args+=(--record-env "$SGB_RECORD_ENV")
+        [ "$SGB_SUMMARY" = true ] && args+=(--md "$GITHUB_STEP_SUMMARY")
+        code=0
+        node "$GITHUB_ACTION_PATH/bin/guard-bench.js" "${args[@]}" || code=$?
+        case $code in
+          0) result=pass ;;
+          1) result=fail ;;
+          *) result=error ;;
+        esac
+        {
+          echo "exit-code=$code"
+          echo "result=$result"
+          echo "report=$SGB_OUT"
+        } >> "$GITHUB_OUTPUT"
+        exit $code

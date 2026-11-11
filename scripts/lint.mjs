@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 
 const DIRS = ['bin', 'src', 'corpus', 'test', 'examples', 'scripts', 'docs', '.github'];
-const ROOT = ['README.md', 'package.json', 'CHANGELOG.md', 'SECURITY.md', 'CONTRIBUTING.md'];
+const ROOT = ['README.md', 'package.json', 'CHANGELOG.md', 'SECURITY.md', 'CONTRIBUTING.md', 'action.yml'];
 const TEXT = new Set(['.js', '.mjs', '.json', '.md', '.yml']);
 
 const walk = (dir) => readdirSync(dir, { withFileTypes: true })

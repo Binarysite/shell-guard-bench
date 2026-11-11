@@ -54,3 +54,47 @@ jobs:
         with:
           name: guard-bench-${{ matrix.os }}-node${{ matrix.node }}
           path: reports/naive.json
+
+  # The composite action in action.yml, run the way another repository would run it.
+  action:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: substring guard passes
+        id: substring
+        uses: ./
+        with:
+          hook: node examples/guards/substring.mjs
+          out: reports/action-substring.json
+      - name: anchored guard fails the gate
+        id: anchored
+        continue-on-error: true
+        uses: ./
+        with:
+          hook: node examples/guards/anchored-regex.mjs
+          out: reports/action-anchored.json
+          summary: 'false'
+      - name: shell metacharacters in an input stay data
+        id: metachar
+        uses: ./
+        with:
+          # If the action pasted inputs into its script, bash would run the $( ) and the backticks.
+          hook: 'exit 2 # $(touch injected-dollar) `touch injected-backtick`'
+          only: privilege
+          out: reports/action-metachar.json
+          summary: 'false'
+      - name: outputs and exit codes
+        env:
+          SUB: ${{ steps.substring.outputs.result }}/${{ steps.substring.outputs.exit-code }}
+          ANC: ${{ steps.anchored.outputs.result }}/${{ steps.anchored.outputs.exit-code }}
+          META: ${{ steps.metachar.outputs.result }}
+          REPORT: ${{ steps.substring.outputs.report }}
+        run: |
+          test "$SUB" = pass/0
+          test "$ANC" = fail/1
+          test "$META" = pass
+          test -s "$REPORT"
+          test ! -e injected-dollar && test ! -e injected-backtick
