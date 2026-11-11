@@ -76,3 +76,13 @@ test('a threshold with nothing to measure fails instead of passing in the void',
   ]);
   assert.equal(summarize(run([])).gate.pass, true, 'no threshold, nothing to check');
 });
+
+test('decisions hidden in text are counted apart from the score', () => {
+  const warning = 'decision JSON mixed with text; Claude Code ignores it';
+  const s = summarize(run([
+    r('git.a', 'block', 'passthrough', { warning }), r('git.b', 'allow', 'passthrough', { warning }),
+    r('git.c', 'block', 'blocked'),
+  ]));
+  assert.deepEqual(s.ignoredDecisions, { count: 2, ids: ['git.a', 'git.b'] });
+  assert.deepEqual(s.leaked, ['git.a'], 'still a leak: Claude Code ignores the decision');
+});

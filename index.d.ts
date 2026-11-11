@@ -55,6 +55,8 @@ export interface Verdict {
   rewrittenCommand?: string | null;
   /** The deprecated top-level `decision: approve | block` decided. */
   legacy?: boolean;
+  /** Set when stdout is text with a decision JSON line in it, which Claude Code ignores. */
+  warning?: string;
 }
 
 /** What the runner observed; the input of classifyHookResult. */
@@ -84,6 +86,8 @@ export interface CaseResult {
   /** One line, at most 200 characters. */
   reason: string | null;
   legacy: boolean;
+  /** See Verdict.warning. */
+  warning: string | null;
   /** One line, at most 200 characters. */
   rewrittenCommand?: string | null;
   exitCode: number | null;
@@ -141,6 +145,8 @@ export interface Summary {
   frictionIds: string[];
   notScoredIds: string[];
   failOpen: { count: number; kinds: Failure[]; ids: string[] };
+  /** Results whose stdout hid a decision in text (Verdict.warning). Scored as what Claude Code does. */
+  ignoredDecisions: { count: number; ids: string[] };
   rewrites: { ids: string[]; countedAsLeaks: number };
   thresholds: { minContained: number | null; maxFriction: number | null };
   /** How many leaked and friction cases the text report lists. */
@@ -164,6 +170,7 @@ export interface ReportResult {
   timedOut: boolean;
   unreapable?: true;
   legacy?: true;
+  warning?: string;
   rewrittenCommand: string | null;
   durationMs: number;
   /** At most 200 characters. */

@@ -1,6 +1,6 @@
 // Text, JSON and Markdown views of a run. The text is deterministic: no timings,
 // no absolute paths, no color, so two runs of the same guard diff cleanly.
-import { CONTRACT } from './classify.js';
+import { CONTRACT, MIXED_WARNING } from './classify.js';
 import { corpusHash } from './corpus.js';
 import { SCHEMA_VERSION, TOOL } from './meta.js';
 import { pct, printable } from './text.js';
@@ -61,6 +61,12 @@ function failOpenLine(summary) {
   return `Fail-open: ${f.count} case(s) failed (${f.kinds.join(', ')}); with "onFailure": "block" they would be blocked.`;
 }
 
+function ignoredLine(summary, ids) {
+  const d = summary.ignoredDecisions;
+  if (!d?.count) return null;
+  return `Ignored decisions: ${d.count} (${MIXED_WARNING}): ${ids(d.ids)}`;
+}
+
 function rewritesLine(run, summary) {
   const n = summary.rewrites.ids.length;
   if (!n) return null;
@@ -97,6 +103,9 @@ export function formatText(run, summary, { out = 'the JSON report', withHeader =
     const first = byId.get(summary.failOpen.ids[0]);
     lines.push(failOpen, `  first: ${first.id}: ${preview(first.reason ?? first.failure, 100)}`);
   }
+  const ignored = ignoredLine(summary, (ids) => ids.slice(0, summary.show).join(', ')
+    + (ids.length > summary.show ? ` and ${ids.length - summary.show} more` : ''));
+  if (ignored) lines.push(ignored);
   const rewrites = rewritesLine(run, summary);
   if (rewrites) lines.push(rewrites);
   lines.push(`RESULT: ${summary.gate.pass ? 'PASS' : 'FAIL'}`);
@@ -148,6 +157,7 @@ export function buildReport(run, summary) {
       timedOut: r.timedOut,
       ...(r.unreapable ? { unreapable: true } : {}),
       ...(r.legacy ? { legacy: true } : {}),
+      ...(r.warning ? { warning: r.warning } : {}),
       rewrittenCommand: r.rewrittenCommand ?? null,
       durationMs: r.durationMs,
       stderrFirstLine: r.stderrFirstLine,
@@ -180,6 +190,8 @@ export function formatMarkdown(run, summary) {
   ];
   const failOpen = failOpenLine(summary);
   if (failOpen) lines.push('', failOpen);
+  const ignored = ignoredLine(summary, ids);
+  if (ignored) lines.push('', ignored);
   for (const reason of summary.gate.reasons) lines.push('', `- ${reason}`);
   return `${lines.join('\n')}\n`;
 }

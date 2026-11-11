@@ -186,6 +186,7 @@ export function toCaseResult(c, raw, verdict) {
     failure: verdict.failure ?? null,
     reason: verdict.reason ? head(verdict.reason) : null,
     legacy: verdict.legacy ?? false,
+    warning: verdict.warning ?? null,
     ...(verdict.rewrittenCommand !== undefined
       ? { rewrittenCommand: verdict.rewrittenCommand === null ? null : head(verdict.rewrittenCommand) } : {}),
     exitCode: raw.exitCode,

@@ -237,7 +237,8 @@ not how a result is scored.
 A crashing, slow or invalid hook lets the command run (Claude Code's default `onFailure: continue`); rerun with
 `--on-failure block` to see your exposure. A common finding of that kind: `"permissionDecision": "block"`, the old
 value in the new field, is invalid output, so the command goes through. So is a `hookSpecificOutput` without
-`hookEventName`, which the docs require. The text report names the first failure and its reason. A hook that
+`hookEventName`, which the docs require. A deny printed after a log line (or before one) is plain text, so no
+decision: the result is listed under "Ignored decisions" with a warning. The text report names the first failure and its reason. A hook that
 fails on every command, harmless ones included, stops the bench at the canary with exit 2 whatever
 `--on-failure` says: in Claude Code it would fail open on every call.
 

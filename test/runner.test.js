@@ -237,3 +237,13 @@ test('runBench refuses an unknown onFailure or permissionMode instead of reading
   await assert.rejects(runBench({ ...base, permissionMode: /** @type {any} */ ('bogus') }),
     (err) => err instanceof TypeError && /permissionMode must be one of default, plan/.test(err.message));
 });
+
+test('a hook that prints a deny after a log line is passthrough with a warning, end to end', async (t) => {
+  const dir = await tempDir(t);
+  const deny = JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny' } });
+  const run = await runBench({
+    hook: `cat > /dev/null; echo 'checking...'; echo '${deny}'`, cases: [harmless()], cwd: dir, canaryGraceMs: 0,
+  });
+  assert.equal(run.results[0].outcome, 'passthrough');
+  assert.equal(run.results[0].warning, 'decision JSON mixed with text; Claude Code ignores it');
+});

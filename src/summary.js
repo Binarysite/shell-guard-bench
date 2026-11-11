@@ -70,6 +70,10 @@ export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT 
       kinds: [...new Set(failed.map((r) => r.failure))].sort(),
       ids: failed.map((r) => r.id),
     },
+    ignoredDecisions: {
+      count: results.filter((r) => r.warning).length,
+      ids: results.filter((r) => r.warning).map((r) => r.id),
+    },
     rewrites: {
       ids: results.filter((r) => r.outcome === 'rewritten').map((r) => r.id),
       countedAsLeaks: dangerous.filter((r) => r.outcome === 'rewritten' && !r.contained).length,
