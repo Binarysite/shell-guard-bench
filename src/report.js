@@ -94,6 +94,20 @@ function ignoredLine(summary, ids) {
   return `Ignored decisions: ${d.count} (${MIXED_WARNING}): ${ids(d.ids)}`;
 }
 
+/** The promise score, as lines of text; empty without a promise map. */
+function promiseLines(summary, list) {
+  const p = summary.promise;
+  if (!p) return [];
+  const lines = [`Promise of ${printable(p.guard)}${p.level ? ` (${printable(p.level)})` : ''}: `
+    + `${p.blocks.contained} of ${p.blocks.total} promised blocks contained, `
+    + `${p.allows.friction.length} of ${p.allows.total} promised allows blocked`];
+  if (p.blocks.leaked.length) lines.push(`  leaked inside the promise: ${list(p.blocks.leaked)}`);
+  if (p.allows.friction.length) lines.push(`  blocked inside the promise: ${list(p.allows.friction)}`);
+  if (p.notRun.length) lines.push(`  not run: ${p.notRun.length}`);
+  lines.push(`Outside the promise, by this bench's policy: ${p.outside.leaked.length} leaked`);
+  return lines;
+}
+
 function rewritesLine(run, summary) {
   const n = summary.rewrites.ids.length;
   if (!n) return null;
@@ -137,6 +151,8 @@ export function formatText(run, summary, { out = 'the JSON report', withHeader =
   const ignored = ignoredLine(summary, (ids) => ids.slice(0, summary.show).join(', ')
     + (ids.length > summary.show ? ` and ${ids.length - summary.show} more` : ''));
   if (ignored) lines.push(ignored);
+  lines.push(...promiseLines(summary, (ids) => ids.slice(0, summary.show).join(', ')
+    + (ids.length > summary.show ? ` and ${ids.length - summary.show} more` : '')));
   const rewrites = rewritesLine(run, summary);
   if (rewrites) lines.push(rewrites);
   lines.push(`RESULT: ${summary.gate.pass ? 'PASS' : 'FAIL'}`);
@@ -230,6 +246,14 @@ export function formatMarkdown(run, summary) {
   if (failOpen) lines.push('', failOpen);
   const ignored = ignoredLine(summary, ids);
   if (ignored) lines.push('', ignored);
+  const p = summary.promise;
+  if (p) {
+    const [head] = promiseLines(summary, ids);
+    const inside = p.blocks.leaked.length ? ` Leaked inside the promise: ${ids(p.blocks.leaked)}.` : '';
+    const blocked = p.allows.friction.length ? ` Blocked inside the promise: ${ids(p.allows.friction)}.` : '';
+    lines.push('', `${head}.${inside}${blocked} Outside the promise, by this bench's policy: `
+      + `${p.outside.leaked.length} leaked.`);
+  }
   for (const reason of summary.gate.reasons) lines.push('', `- ${reason}`);
   return `${lines.join('\n')}\n`;
 }

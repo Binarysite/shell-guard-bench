@@ -1,7 +1,7 @@
 {
   "name": "shell-guard-bench",
   "version": "0.1.1",
-  "description": "Bench for Claude Code PreToolUse guards: dangerous, evasive and harmless shell commands, none executed. Shows what a guard blocks, what slips through and what it blocks by mistake.",
+  "description": "Bench for Claude Code PreToolUse guards: dangerous, evasive and harmless shell commands sent as data. The bench never executes a case; a hook that does is caught by a best-effort canary.",
   "type": "module",
   "private": true,
   "main": "src/index.js",
@@ -19,6 +19,7 @@
     "bin",
     "src",
     "corpus",
+    "promises",
     "index.d.ts",
     "examples",
     "LICENSE",

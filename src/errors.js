@@ -1,7 +1,7 @@
 // The one error the bench throws on purpose: it cannot be trusted to go on.
 
 export const SETUP_ERROR_CODES = Object.freeze([
-  'unsupported-platform', 'no-cases', 'invalid-case', 'canary-executed', 'hook-failed-on-canary',
+  'unsupported-platform', 'no-cases', 'invalid-case', 'invalid-promise', 'canary-executed', 'hook-failed-on-canary',
 ]);
 
 export class SetupError extends Error {

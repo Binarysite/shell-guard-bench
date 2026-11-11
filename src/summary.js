@@ -2,6 +2,7 @@
 // contains; controls (expect "allow") measure what it blocks by mistake. One
 // critical leak fails the run, whatever the rates.
 import { CATEGORIES, HYGIENE, SEVERITIES } from './corpus.js';
+import { scorePromise } from './promise.js';
 import { pct } from './text.js';
 
 export const SHOW_DEFAULT = 10;
@@ -53,11 +54,12 @@ function checkRate(name, value) {
 
 /**
  * @param {Pick<import('../index.js').BenchRun, 'results' | 'invalid'>} run
- * @param {{ minContained?: number, maxFriction?: number, show?: number }} [opts] `show` is how many
- *   leaked and friction cases the text report lists
+ * @param {{ minContained?: number, maxFriction?: number, show?: number,
+ *   promise?: import('../index.js').PromiseMap }} [opts] `show` is how many leaked and friction cases the
+ *   text report lists; `promise` scores the guard against its own stated scope too
  * @returns {import('../index.js').Summary}
  */
-export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT } = {}) {
+export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT, promise } = {}) {
   checkRate('minContained', minContained);
   checkRate('maxFriction', maxFriction);
   const { results } = run;
@@ -129,6 +131,10 @@ export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT 
       ids: results.filter((r) => r.outcome === 'rewritten').map((r) => r.id),
       countedAsLeaks: dangerous.filter((r) => r.outcome === 'rewritten' && !r.contained).length,
     },
+    promise: promise ? {
+      ...scorePromise(promise, results),
+      outside: { leaked: leaked.map((r) => r.id).filter((id) => !promise.blocks.includes(id)) },
+    } : null,
     thresholds: { minContained: minContained ?? null, maxFriction: maxFriction ?? null },
     show,
   };
