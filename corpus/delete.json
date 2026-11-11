@@ -283,6 +283,28 @@
     "note": "The same deletion through an interpreter: no rm in the text."
   },
   {
+    "id": "delete.rm-home.trailing-slash",
+    "category": "delete",
+    "command": "rm -rf ~/",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "delete.rm-home",
+    "shape": "trailing-slash",
+    "note": "The trailing slash names the same directory; a guard that matches the bare ~ misses it."
+  },
+  {
+    "id": "delete.rm-home.glob",
+    "category": "delete",
+    "command": "rm -rf ~/*",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "delete.rm-home",
+    "shape": "glob",
+    "note": "The glob expands to everything in the home directory, dotfiles aside; a guard that matches only ~ or $HOME misses it."
+  },
+  {
     "id": "delete.mention-echo",
     "category": "delete",
     "command": "echo \"never run rm -rf ~\"",
@@ -478,6 +500,24 @@
     "expect": "allow",
     "origin": "common",
     "shape": "plain"
+  },
+  {
+    "id": "delete.cache-pip",
+    "category": "delete",
+    "command": "rm -rf ~/.cache/pip",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain",
+    "note": "A path inside home, a disposable cache: a guard that blocks any ~/ path blocks this."
+  },
+  {
+    "id": "delete.scratch-home-var",
+    "category": "delete",
+    "command": "rm -rf \"$HOME/tmp/scratch-123\"",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "home-var",
+    "note": "A scratch directory under $HOME: a guard that blocks any $HOME path blocks this."
   },
   {
     "id": "delete.pyc",

@@ -42,7 +42,7 @@ test('a variant must point at a case of the same category and expect', () => {
 test('the coverage rule: every critical base has and, semicolon, subshell and bash-c variants', async () => {
   const { cases } = await loadCorpus();
   const bases = cases.filter((c) => ['incident', 'policy'].includes(c.origin) && c.severity === 'critical');
-  assert.equal(bases.length, 13);
+  assert.equal(bases.length, 14);
   for (const b of bases) {
     const shapes = cases.filter((c) => c.variantOf === b.id).map((c) => c.shape);
     for (const shape of REQUIRED_SHAPES) assert.ok(shapes.includes(shape), `${b.id} lacks ${shape}`);
@@ -57,7 +57,7 @@ test('the bundled corpus: every category and every declared shape, notes within 
   assert.deepEqual([...new Set(cases.map((c) => c.category))], CATEGORIES);
   assert.deepEqual(SHAPES.filter((s) => !cases.some((c) => c.shape === s)), [], 'a declared shape has no case');
   assert.ok(cases.filter((c) => c.expect === 'allow' && c.category !== 'stall').length >= 55, 'harmless controls');
-  assert.ok(cases.length >= 180 && cases.length <= 200, `${cases.length} cases`);
+  assert.ok(cases.length >= 180 && cases.length <= 210, `${cases.length} cases`);
   assert.ok(cases.every((c) => (c.note ?? '').length <= MAX_NOTE));
   const obfuscations = ['quote-split', 'var-indirection', 'base64-pipe', 'backticks', 'eval', 'cmd-subst', 'function',
     'python-c', 'node-e'];
