@@ -6,6 +6,8 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-11
+
 ### Changed
 
 - `tsconfig.json` is `strict`; `src/` and `bin/` type-check under it.
@@ -114,6 +116,7 @@ First release.
   `SetupError`.
 - Two toy guards and `npm run example`.
 
-[Unreleased]: https://github.com/Binarysite/shell-guard-bench/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Binarysite/shell-guard-bench/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Binarysite/shell-guard-bench/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Binarysite/shell-guard-bench/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Binarysite/shell-guard-bench/releases/tag/v0.1.0
