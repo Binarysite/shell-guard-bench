@@ -86,6 +86,8 @@ function hidesDecision(stdout) {
  * Two or more lines that each parse on their own are plain text, unless one of them is
  * an object that sets a known field: then the whole output is a parse failure.
  * @param {string} stdout
+ * @returns {{ kind: 'none' } | { kind: 'text' } | { kind: 'invalid', error: string }
+ *   | { kind: 'json', value: any }}
  */
 function parseStdout(stdout) {
   const text = String(stdout ?? '').trim();
@@ -101,7 +103,7 @@ function parseStdout(stdout) {
       if (!setsField) return { kind: 'text' };
       return { kind: 'invalid', error: 'several JSON lines, and one of them sets a field' };
     }
-    return { kind: 'invalid', error: `invalid JSON: ${err.message}` };
+    return { kind: 'invalid', error: `invalid JSON: ${/** @type {Error} */ (err).message}` };
   }
   const error = schemaError(value);
   return error ? { kind: 'invalid', error } : { kind: 'json', value };
@@ -116,7 +118,7 @@ function parseStdout(stdout) {
 function decideFields(out, { command, acceptRewrites }) {
   const h = out.hookSpecificOutput ?? {};
   const legacy = h.permissionDecision === undefined && out.decision !== undefined;
-  const decision = h.permissionDecision ?? LEGACY_DECISIONS[out.decision];
+  const decision = h.permissionDecision ?? LEGACY_DECISIONS[/** @type {'approve' | 'block'} */ (out.decision)];
   const reason = h.permissionDecisionReason ?? out.reason;
   const extra = legacy ? { legacy: true } : {};
   /**
@@ -171,7 +173,7 @@ export function classifyHookResult(raw, ctx) {
   if (raw.spawnError) return failed('cannot-start', raw.spawnError.message);
   if (raw.timedOut) return failed('timeout', 'timed out');
   // stdout cut at the bench's 1 MiB limit cannot be read as a whole: plain text.
-  const parsed = raw.overflow ? { kind: 'text' } : parseStdout(raw.stdout);
+  const parsed = raw.overflow ? { kind: /** @type {const} */ ('text') } : parseStdout(raw.stdout);
   // Exit 2 blocks even with JSON on stdout, even a permissionDecision of "allow".
   if (raw.exitCode === 2) {
     return { outcome: 'blocked', contained: true, friction: true, ...(stderr ? { reason: stderr } : {}) };

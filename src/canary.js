@@ -20,6 +20,7 @@ export const CANARY_GRACE_MS = 1000;
 const EXECUTED_MESSAGE = 'The hook ran the command it was asked to judge. Refusing to send destructive cases.';
 
 /** Single-quotes a path for sh, so a quote in TMPDIR cannot break the canary. */
+/** @param {string} path */
 const quote = (path) => `'${path.replaceAll("'", "'\\''")}'`;
 const name = () => randomBytes(8).toString('hex');
 

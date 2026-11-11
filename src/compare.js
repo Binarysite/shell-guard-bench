@@ -30,6 +30,7 @@ function check(report, side) {
 export function compareReports(before, after) {
   check(before, 'before');
   check(after, 'after');
+  /** @type {string[]} */
   const warnings = [];
   for (const [label, get] of WATCHED) {
     const [a, b] = [get(before), get(after)];
@@ -42,7 +43,9 @@ export function compareReports(before, after) {
   if (onlyBefore.length) warnings.push(`only in before: ${few(onlyBefore)}`);
   if (onlyAfter.length) warnings.push(`only in after: ${few(onlyAfter)}`);
 
+  /** @type {import('../index.js').Change[]} */
   const regressions = [];
+  /** @type {import('../index.js').Change[]} */
   const improvements = [];
   for (const [id, b] of old) {
     const a = now.get(id);

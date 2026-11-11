@@ -6,8 +6,8 @@ catch, and where the code lives. The [README](../README.md) covers running it.
 ## Design decisions and trade-offs
 
 **A bench, not one more guard.** There are many PreToolUse guards for Bash and
-few ways to tell how well any of them holds. A guard is a policy; a bench is a
-measurement that works for every policy, and it is the part that was missing.
+few ways to tell how well any of them holds, so the bench measures any of them
+with the same corpus and the same contract.
 
 **It measures text, and the bench never executes a case.** A guard only ever
 sees the text of a command, so the text is what the bench sends: the command
@@ -207,28 +207,21 @@ not emulate that.
 
 ## Known limits
 
-- It measures the text of a command, not its effect. It is not a sandbox.
+The caveats that apply to anyone running the bench (not a sandbox, the
+canary's reach, what isolation covers, the inherited environment, the hook
+command kept as written) are listed once, in
+[SECURITY.md](../SECURITY.md#caveats). The limits of the design itself:
+
 - Whatever depends on runtime state (which process a PID is, which branch is
   checked out, whether a mount answers, what a script does) is "not scored".
 - The corpus encodes a baseline policy that is not universal: for some teams a
-  push to `main` is fine. Override the case by id.
+  push to `main` is fine. Override the case by id; a promise map scores a guard
+  against its own policy instead.
 - Contract fidelity is approximate: the schema checks only the known fields,
   precedence between several hooks is not emulated, and `continue: false` and
   `defer` count as not contained.
-- Only the Bash tool: not Write, Edit, Read or MCP tools. Only the Claude Code
-  contract in its shell form; the exec form (`args`) is approximated by `sh -c`
-  (join `command` and `args` into one quoted shell command).
-  Windows is not supported.
-- Isolation covers HOME, the XDG config and cache directories and the working
-  directory, not the rest of the environment: the hook inherits it, CI secrets
-  included. With `--no-isolate`, guards that inspect the disk or git give
-  results that depend on where you run the bench. The reports keep the hook
-  command as written, so an absolute path shows the user name.
-- The canary is best effort: it catches a hook that runs every command, at once
-  or within a second. It does not catch one that runs only some commands or
-  waits longer, and a late catch comes after every case was sent.
-- Obfuscation is endless: passing the corpus does not prove a guard cannot be
-  evaded.
+- Only the Bash tool and the Claude Code contract in its shell form; the exec
+  form (`args`) is approximated by `sh -c`. Windows is not supported.
 - With 115 scored dangerous cases and 58 controls, one case moves a rate by about
   one or two points: the text report prints a 95% Wilson interval next to each
   rate, and `compare` lists which cases changed.
@@ -241,8 +234,9 @@ not emulate that.
 - `--from-settings`: read the Bash hooks from the settings files and emulate the
   precedence between them.
 - Other agents, once their hook contract is documented.
-- More public guards in the matrix, each at a pinned version with its report
-  committed, as cc-safety-net 2.6.7 is today.
+- More public guards in the matrix, each at a pinned version with its promise
+  map and reports committed, as cc-safety-net 2.6.7 is today.
+- A comparison of the emulated contract with a real Claude Code session.
 
 ## Layout
 
@@ -250,7 +244,8 @@ not emulate that.
 bin/guard-bench.js    CLI: flags, exit codes, compare
 src/classify.js       the contract table, pure, with its source and date
 src/runner.js         spawn, stdin, timeout, process group, output limits, runBench
-src/canary.js         canary before and after
+src/canary.js         canaries before and after
+src/promise.js        promise maps: loading, validation, scoring
 src/errors.js         SetupError and its codes
 src/meta.js           tool name, version and report schema version
 src/corpus.js         loading, strict validation, overrides, filters, hash
@@ -262,6 +257,9 @@ src/text.js           first line of a stream, percentages
 corpus/*.json         the ten categories
 examples/guards/      two toy guards for npm run example
 scripts/example.mjs   runs both and requires exit 1 and exit 0
+promises/             promise maps of measured guards
+reports/              committed reports of measured guards
+action.yml            the composite GitHub Action
 test/                 node:test, fixture hooks in test/fixtures/hooks
 test-types/conform.ts index.d.ts and src/index.js must agree
 ```

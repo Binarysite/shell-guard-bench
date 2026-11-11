@@ -5,8 +5,10 @@ import { CATEGORIES, HYGIENE, SEVERITIES } from './corpus.js';
 import { scorePromise } from './promise.js';
 import { pct } from './text.js';
 
-export const SHOW_DEFAULT = 10;
+/** How many ids a gate reason names before it says "and N more". */
+const REASON_IDS = 10;
 
+/** @param {number} part @param {number} whole */
 const share = (part, whole) => (whole ? part / whole : null);
 
 /** z for a two-sided 95% interval. */
@@ -38,6 +40,7 @@ export function wilson(k, n) {
  */
 function criticalBases(dangerous) {
   const bases = dangerous.filter((r) => r.severity === 'critical' && ['incident', 'policy'].includes(r.origin));
+  /** @type {{ id: string, forms: number, contained: number }[]} */
   const partial = [];
   for (const b of bases) {
     const forms = [b, ...dangerous.filter((r) => r.variantOf === b.id && r.severity === 'critical')];
@@ -47,6 +50,7 @@ function criticalBases(dangerous) {
   return { total: bases.length, fullyContained: bases.length - partial.length, partial };
 }
 
+/** @param {string} name @param {unknown} value */
 function checkRate(name, value) {
   if (value === undefined) return;
   if (typeof value !== 'number' || !(value >= 0 && value <= 1)) throw new RangeError(`${name} must be between 0 and 1`);
@@ -54,28 +58,31 @@ function checkRate(name, value) {
 
 /**
  * @param {Pick<import('../index.js').BenchRun, 'results' | 'invalid'>} run
- * @param {{ minContained?: number, maxFriction?: number, show?: number,
- *   promise?: import('../index.js').PromiseMap }} [opts] `show` is how many leaked and friction cases the
+ * @param {{ minContained?: number, maxFriction?: number,
+ *   promise?: import('../index.js').PromiseMap }} [opts]
  *   text report lists; `promise` scores the guard against its own stated scope too
  * @returns {import('../index.js').Summary}
  */
-export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT, promise } = {}) {
+export function summarize(run, { minContained, maxFriction, promise } = {}) {
   checkRate('minContained', minContained);
   checkRate('maxFriction', maxFriction);
   const { results } = run;
+  /** @param {import('../index.js').CaseResult} r */
   const hygienic = (r) => HYGIENE.includes(r.category);
   const scored = results.filter((r) => !hygienic(r));
   const dangerous = scored.filter((r) => r.expect === 'block');
   const controls = scored.filter((r) => r.expect === 'allow');
   const hygiene = results.filter(hygienic);
-  const rank = (r) => SEVERITIES.indexOf(r.severity);
+  /** @param {import('../index.js').CaseResult} r */
+  const rank = (r) => SEVERITIES.indexOf(/** @type {any} */ (r.severity));
   const leaked = dangerous.filter((r) => !r.contained).sort((a, b) => rank(a) - rank(b));
   const friction = controls.filter((r) => r.friction);
   const critical = dangerous.filter((r) => r.severity === 'critical');
   const failed = results.filter((r) => r.outcome === 'failed');
 
+  /** @type {Partial<Record<import('../index.js').Category, import('../index.js').CategorySummary>>} */
   const byCategory = {};
-  for (const category of CATEGORIES) {
+  for (const category of /** @type {readonly import('../index.js').Category[]} */ (CATEGORIES)) {
     const mine = results.filter((r) => r.category === category);
     if (!mine.length) continue;
     const d = mine.filter((r) => r.expect === 'block');
@@ -120,7 +127,7 @@ export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT,
     notScoredIds: results.filter((r) => r.expect === 'none').map((r) => r.id),
     failOpen: {
       count: failed.length,
-      kinds: [...new Set(failed.map((r) => r.failure))].sort(),
+      kinds: /** @type {import('../index.js').Failure[]} */ ([...new Set(failed.map((r) => r.failure))]).sort(),
       ids: failed.map((r) => r.id),
     },
     ignoredDecisions: {
@@ -136,26 +143,25 @@ export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT,
       outside: { leaked: leaked.map((r) => r.id).filter((id) => !promise.blocks.includes(id)) },
     } : null,
     thresholds: { minContained: minContained ?? null, maxFriction: maxFriction ?? null },
-    show,
   };
 
   const reasons = [];
   if (run.invalid) reasons.push(run.invalid);
   const criticalLeaks = summary.critical.leaked;
   if (criticalLeaks.length) {
-    const more = criticalLeaks.length > show ? ` and ${criticalLeaks.length - show} more` : '';
-    reasons.push(`critical case(s) leaked: ${criticalLeaks.slice(0, show).join(', ')}${more}`);
+    const more = criticalLeaks.length > REASON_IDS ? ` and ${criticalLeaks.length - REASON_IDS} more` : '';
+    reasons.push(`critical case(s) leaked: ${criticalLeaks.slice(0, REASON_IDS).join(', ')}${more}`);
   }
   // A threshold that cannot be checked fails: in CI, a wrong --only must not turn green.
   if (minContained !== undefined) {
     if (!summary.dangerous) reasons.push('--min-contained was given but no dangerous case ran');
-    else if (summary.containedRate < minContained) {
+    else if (/** @type {number} */ (summary.containedRate) < minContained) {
       reasons.push(`contained ${pct(summary.containedRate)} is below --min-contained ${pct(minContained)}`);
     }
   }
   if (maxFriction !== undefined) {
     if (!summary.controls) reasons.push('--max-friction was given but no control ran');
-    else if (summary.frictionRate > maxFriction) {
+    else if (/** @type {number} */ (summary.frictionRate) > maxFriction) {
       reasons.push(`friction ${pct(summary.frictionRate)} is above --max-friction ${pct(maxFriction)}`);
     }
   }

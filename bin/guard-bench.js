@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadCorpus, runBench, summarize, compareReports, SetupError } from '../src/index.js';
-import { ON_FAILURE, PERMISSION_MODES, RUN_DEFAULTS, isDirectory } from '../src/runner.js';
-import { SHOW_DEFAULT } from '../src/summary.js';
+import { fileProblem } from '../src/errors.js';
+import { ON_FAILURE, PERMISSION_MODES, RUN_DEFAULTS } from '../src/runner.js';
 import { TOOL } from '../src/meta.js';
 import { loadPromise } from '../src/promise.js';
-import { buildReport, formatCase, formatComparison, formatMarkdown, formatText, header } from '../src/report.js';
+import {
+  SHOW_DEFAULT, buildReport, formatCase, formatComparison, formatMarkdown, formatText, header,
+} from '../src/report.js';
 
 const OUT = 'reports/guard-bench.json';
 
@@ -53,6 +55,11 @@ starts being blocked or asked.`;
 
 class UsageError extends Error {}
 
+/**
+ * @param {string} name
+ * @param {unknown} value
+ * @param {{ min?: number, max?: number, integer?: boolean, above?: boolean }} [opts]
+ */
 function toNumber(name, value, { min = 0, max = Infinity, integer = false, above = false } = {}) {
   const n = Number(value);
   const ok = value !== '' && Number.isFinite(n) && (above ? n > min : n >= min) && n <= max
@@ -64,31 +71,38 @@ function toNumber(name, value, { min = 0, max = Infinity, integer = false, above
   return n;
 }
 
-/** Runs a write and turns its failure into a usage error that names the file. */
+/**
+ * Runs a write and turns its failure into a usage error that names the file.
+ * @param {string} file
+ * @param {() => Promise<unknown>} write
+ */
 async function writing(file, write) {
   try {
     await write();
   } catch (err) {
-    throw new UsageError(`cannot write ${file}: ${err.message}`);
+    throw new UsageError(`cannot write ${file}: ${/** @type {Error} */ (err).message}`);
   }
 }
 
+/** @param {string | undefined} value */
 const list = (value) => (value ? value.split(',').map((s) => s.trim()).filter(Boolean) : []);
 
+/** @param {string} file */
 async function readReport(file) {
   let raw;
   try {
     raw = await readFile(file, 'utf8');
   } catch (err) {
-    throw new UsageError(`${file}: ${err.code === 'ENOENT' ? 'file not found' : err.message}`);
+    throw new UsageError(`${file}: ${fileProblem(err)}`);
   }
   try {
     return JSON.parse(raw);
   } catch (err) {
-    throw new UsageError(`${file}: invalid JSON: ${err.message}`);
+    throw new UsageError(`${file}: invalid JSON: ${/** @type {Error} */ (err).message}`);
   }
 }
 
+/** @param {string[]} files */
 async function runCompare(files) {
   if (files.includes('-h') || files.includes('--help')) {
     console.log(HELP);
@@ -102,12 +116,13 @@ async function runCompare(files) {
   try {
     result = compareReports(before, after);
   } catch (err) {
-    throw new UsageError(err.message.replace(/^before/, files[0]).replace(/^after/, files[1]));
+    throw new UsageError(/** @type {Error} */ (err).message.replace(/^before/, files[0]).replace(/^after/, files[1]));
   }
   console.log(formatComparison(result));
   return result.regressions.length ? 1 : 0;
 }
 
+/** @param {string[]} argv */
 function parseCli(argv) {
   try {
     return parseArgs({
@@ -137,11 +152,14 @@ function parseCli(argv) {
       },
     }).values;
   } catch (err) {
-    if (String(err.code).startsWith('ERR_PARSE_ARGS')) throw new UsageError(`${err.message} (see guard-bench --help)`);
+    if (String(/** @type {any} */ (err).code).startsWith('ERR_PARSE_ARGS')) {
+      throw new UsageError(`${/** @type {Error} */ (err).message} (see guard-bench --help)`);
+    }
     throw err;
   }
 }
 
+/** @param {string[]} argv */
 async function main(argv) {
   if (argv[0] === 'compare') return runCompare(argv.slice(1));
   const args = parseCli(argv);
@@ -160,8 +178,9 @@ async function main(argv) {
   if (!ON_FAILURE.includes(args['on-failure'])) throw new UsageError(`--on-failure must be ${ON_FAILURE.join(' or ')}`);
   const timeoutSec = toNumber('timeout', args.timeout, { min: 0, max: 86_400, above: true });
   const show = toNumber('show', args.show, { integer: true });
+  /** @param {'min-contained' | 'max-friction'} name */
   const rate = (name) => (args[name] === undefined ? undefined : toNumber(name, args[name], { max: 1 }));
-  if (args.cwd !== undefined && !(await isDirectory(args.cwd))) {
+  if (args.cwd !== undefined && !(await stat(args.cwd).then((s) => s.isDirectory(), () => false))) {
     throw new UsageError(`--cwd ${args.cwd} is not a directory`);
   }
   if (args.isolate && args['no-isolate']) throw new UsageError('--isolate and --no-isolate cannot be used together');
@@ -172,13 +191,14 @@ async function main(argv) {
   const maxFriction = rate('max-friction');
 
   // Fail on an unwritable report before the run, not after it printed a result.
-  await writing(args.out, () => mkdir(dirname(resolve(args.out)), { recursive: true }));
-  if (args.md) await writing(args.md, () => appendFile(args.md, ''));
+  await writing(args.out, () => mkdir(dirname(resolve(/** @type {string} */ (args.out))), { recursive: true }));
+  if (args.md) await writing(args.md, () => appendFile(/** @type {string} */ (args.md), ''));
 
   const { cases, overridden } = await loadCorpus({ extra: args.cases, only: list(args.only), skip: list(args.skip) });
   // Checked against every case, so an id that --only skipped is "not run", not a typo.
   const promise = args.promise === undefined ? undefined
     : await loadPromise(args.promise, (await loadCorpus({ extra: args.cases })).cases.map((c) => c.id));
+  /** @type {((r: import('../index.js').CaseResult) => void) | undefined} */
   const verbose = args.verbose ? (r) => console.log(formatCase(r)) : undefined;
   console.log(header({ hook: args.hook, results: cases }));
   if (overridden.length) console.log(`Overridden by --cases: ${overridden.join(', ')}`);
@@ -195,12 +215,12 @@ async function main(argv) {
     recordEnv,
     onResult: verbose,
   });
-  const summary = summarize(run, { minContained, maxFriction, show, promise });
+  const summary = summarize(run, { minContained, maxFriction, promise });
   if (verbose) console.log('');
-  console.log(formatText(run, summary, { out: args.out, withHeader: false }));
+  console.log(formatText(run, summary, { out: args.out, withHeader: false, show }));
 
   await writing(args.out, () => writeFile(args.out, `${JSON.stringify(buildReport(run, summary), null, 2)}\n`));
-  if (args.md) await writing(args.md, () => appendFile(args.md, formatMarkdown(run, summary)));
+  if (args.md) await writing(args.md, () => appendFile(/** @type {string} */ (args.md), formatMarkdown(run, summary)));
   console.log(`Report: ${args.out}`);
   if (run.invalid) return 2;
   return summary.gate.pass ? 0 : 1;
