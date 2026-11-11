@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { chmod, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { classifyHookResult, runBench } from '../src/index.js';
 import { hookEnv, hookInput, runHook, toCaseResult, REAP_GRACE_MS } from '../src/runner.js';
 import { harmless, nodeHook, tempDir } from './helpers.js';
@@ -49,22 +50,68 @@ test('the hook gets the documented stdin, cwd and environment', async (t) => {
   assert.equal(hookEnv(dir, { CLAUDE_PROJECT_DIR: '/srv/app' }).CLAUDE_PROJECT_DIR, '/srv/app');
 });
 
-test('runBench sends one session, a fresh transcript and numbered tool_use_ids', async (t) => {
+test('runBench sends one session, a fresh transcript and one tool_use_id sequence for canaries and cases', async (t) => {
   const dir = await tempDir(t);
   const log = join(dir, 'log.jsonl');
   const run = await runBench({
     hook: nodeHook('record.mjs', log), cwd: dir, cases: [harmless('stall.a'), harmless('stall.b')],
   });
   const lines = await readLines(log);
-  assert.equal(lines.length, 4, 'two canaries and two cases');
-  const [first, second] = lines.slice(2).map((l) => l.input);
+  assert.equal(lines.length, 5, 'three canaries and two cases');
+  const ids = lines.map((l) => l.input.tool_use_id);
+  assert.deepEqual(ids, [1, 2, 3, 4, 5].map((n) => `toolu_bench_${n}`), 'canaries look like cases');
+  const [first, second] = lines.slice(3).map((l) => l.input);
   assert.match(first.session_id, /^[0-9a-f-]{36}$/);
   assert.equal(second.session_id, first.session_id);
-  assert.deepEqual([first.tool_use_id, second.tool_use_id], ['toolu_bench_1', 'toolu_bench_2']);
   assert.equal(first.permission_mode, 'default');
   assert.match(first.transcript_path, /transcript\.jsonl$/);
   assert.deepEqual(run.results.map((r) => r.outcome), ['passthrough', 'passthrough']);
   assert.equal(run.invalid, null);
+});
+
+test('isolation is the default: a temporary cwd, HOME, XDG_CONFIG_HOME and XDG_CACHE_HOME', async (t) => {
+  const dir = await tempDir(t);
+  const log = join(dir, 'log.jsonl');
+  const run = await runBench({ hook: nodeHook('record.mjs', log), cases: [harmless()], canaryGraceMs: 0 });
+  const seen = (await readLines(log)).at(-1);
+  assert.equal(run.isolate, true);
+  const root = dirname(seen.home);
+  assert.match(basename(root), /^shell-guard-bench-/);
+  assert.equal(basename(run.cwd), 'work');
+  assert.equal(dirname(run.cwd), root);
+  assert.equal(seen.input.cwd, run.cwd);
+  assert.equal(seen.projectDir, run.cwd);
+  assert.deepEqual([seen.xdgConfig, seen.xdgCache], [join(seen.home, '.config'), join(seen.home, '.cache')]);
+  assert.notEqual(seen.home, process.env.HOME);
+  assert.equal(existsSync(root), false, 'the temporary layout is removed after the run');
+});
+
+test('an explicit cwd keeps the isolated HOME; isolate false inherits HOME and the current directory', async (t) => {
+  const dir = await tempDir(t);
+  const log = join(dir, 'log.jsonl');
+  const isolated = await runBench({ hook: nodeHook('record.mjs', log), cases: [harmless()], cwd: dir, canaryGraceMs: 0 });
+  const a = (await readLines(log)).at(-1);
+  assert.equal(isolated.cwd, dir);
+  assert.equal(a.cwd, dir);
+  assert.notEqual(a.home, process.env.HOME);
+  const open = await runBench({
+    hook: nodeHook('record.mjs', log), cases: [harmless()], isolate: false, canaryGraceMs: 0,
+  });
+  const b = (await readLines(log)).at(-1);
+  assert.equal(open.isolate, false);
+  assert.equal(open.cwd, process.cwd());
+  assert.equal(b.home, process.env.HOME ?? null);
+  assert.equal(b.xdgConfig, process.env.XDG_CONFIG_HOME ?? null);
+});
+
+test('recordEnv keeps variable names, and refuses something that is not a name', async (t) => {
+  const dir = await tempDir(t);
+  const run = await runBench({
+    hook: 'exit 0', cases: [harmless()], cwd: dir, canaryGraceMs: 0, recordEnv: ['GUARD_LEVEL', 'GUARD_HOME'],
+  });
+  assert.deepEqual(run.recordedEnv, ['GUARD_LEVEL', 'GUARD_HOME']);
+  await assert.rejects(runBench({ hook: 'exit 0', cases: [harmless()], cwd: dir, recordEnv: ['A=1'] }),
+    (err) => err instanceof TypeError && /"A=1" is not a variable name/.test(err.message));
 });
 
 test('a timeout kills the whole process group, grandchildren included', async (t) => {

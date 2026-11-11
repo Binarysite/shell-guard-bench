@@ -26,7 +26,7 @@ It runs the bench against the two toy guards in `examples/guards/`, about 19 sec
 
 <!-- example:start -->
 ```text
-$ guard-bench --hook "node examples/guards/anchored-regex.mjs" --show 3
+$ guard-bench --hook "node examples/guards/anchored-regex.mjs" --cwd . --show 3
 shell-guard-bench 0.1.1  hook: node examples/guards/anchored-regex.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
 
 category   dangerous  contained   leaked  controls  friction  not scored
@@ -61,7 +61,7 @@ exit code 1
 
 <!-- example-2:start -->
 ```text
-$ guard-bench --hook "node examples/guards/substring.mjs" --show 3
+$ guard-bench --hook "node examples/guards/substring.mjs" --cwd . --show 3
 shell-guard-bench 0.1.1  hook: node examples/guards/substring.mjs  cases: 89  contract: Claude Code hooks (checked 2026-10-09)
 
 category   dangerous  contained   leaked  controls  friction   not scored
@@ -110,7 +110,7 @@ through. The second matches anywhere in the text, so it contains every critical 
 Pass the `command` of the PreToolUse hook from your `settings.json` to `--hook`, as it is written there:
 
 ```bash
-npx --yes github:Binarysite/shell-guard-bench#v0.1.1 --hook "$HOME/.claude/hooks/guard.sh" --cwd "$(mktemp -d)"
+npx --yes github:Binarysite/shell-guard-bench#v0.1.1 --hook "$HOME/.claude/hooks/guard.sh"
 ```
 
 To list the PreToolUse command hooks of a settings file (matcher, a tab, then the command):
@@ -125,9 +125,13 @@ sets it to `--cwd` when it is not already set.
 If the hook uses the exec form (`command` plus an `args` array), join them into one shell command, quoting each
 argument. A tag can be moved; for a fixed version, use a commit SHA after the `#`.
 
-The hook runs with `/bin/sh -c`, like Claude Code runs it, with the working directory of `--cwd` (default: the
-current one). `--cwd "$(mktemp -d)"` keeps guards that read the disk or git away from your real directory; with a
-relative hook path, make it absolute or drop `--cwd`.
+The hook runs with `/bin/sh -c`, like Claude Code runs it. By default (`--isolate`) its working directory is an
+empty temporary directory and `HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` point at temporary directories too,
+so a guard that reads or writes its surroundings does it there. A hook path written with `~` or a relative path
+then resolves inside those directories: expand it before the bench sees it (`"$HOME/..."`, `"$PWD/..."`), or pass
+`--cwd .` for a repository-relative hook. `--no-isolate` gives the hook your real home and current directory, for a
+guard that needs them. `--record-env NAME,...` lists the variables that configured the guard in the report, by
+name only.
 
 Useful flags: `--only git,sync` or `--skip stall` to pick categories or id prefixes, `--timeout 30` for a slow
 guard, `--permission-mode auto` to send the mode your agent runs in, `-v` to print every case, and `--help` for
@@ -191,10 +195,10 @@ version on this day against this corpus, not the tool in general.
 
 ## How it works
 
-No command from the corpus is ever executed. Each one only travels inside the JSON the hook reads on stdin, and
-before the first dangerous case the bench sends two harmless canaries that create a file: if the file appears, the
-hook ran what it was asked to judge and the bench stops with exit 2. The canary is a best-effort check, not a
-sandbox: [SECURITY.md](SECURITY.md) says what it cannot catch.
+The bench never executes a case: each command only travels inside the JSON the hook reads on stdin. A hook that
+does execute what it receives is caught by a best-effort canary: before the first case the bench sends three
+harmless commands on random paths (two `touch`, one `rm -rf` of a directory it created), and if one of them takes
+effect the bench stops with exit 2. [SECURITY.md](SECURITY.md) says what it cannot catch.
 
 ```mermaid
 flowchart LR

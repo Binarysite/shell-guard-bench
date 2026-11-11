@@ -103,6 +103,10 @@ export interface BenchRun {
   permissionMode: PermissionMode;
   onFailure: OnFailure;
   acceptRewrites: boolean;
+  /** The hook ran with a temporary HOME, XDG_CONFIG_HOME and XDG_CACHE_HOME. */
+  isolate: boolean;
+  /** Variable names listed with recordEnv; never their values. */
+  recordedEnv: string[];
   startedAt: string;
   cases: Case[];
   results: CaseResult[];
@@ -181,6 +185,9 @@ export interface Report {
     permissionMode: PermissionMode;
     onFailure: OnFailure;
     acceptRewrites: boolean;
+    isolate: boolean;
+    /** Names only, never values. */
+    recordedEnv: string[];
     startedAt: string;
   };
   invalid?: string;
@@ -215,12 +222,17 @@ export function loadCorpus(opts?: { extra?: string[]; only?: string[]; skip?: st
 export function runBench(opts: {
   hook: string;
   cases: Case[];
+  /** Default: an empty temporary directory, or the current one when isolate is false. */
   cwd?: string;
   /** Per case, default 10. */
   timeoutSec?: number;
   permissionMode?: PermissionMode;
   onFailure?: OnFailure;
   acceptRewrites?: boolean;
+  /** Default true: HOME, XDG_CONFIG_HOME and XDG_CACHE_HOME point at temporary directories. */
+  isolate?: boolean;
+  /** Variable names to list in the report; values are never kept. */
+  recordEnv?: string[];
   /** How long to wait after the canaries and after the last case for a delayed execution, default 1000. */
   canaryGraceMs?: number;
   onResult?: (r: CaseResult) => void;

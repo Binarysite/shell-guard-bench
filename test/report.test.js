@@ -15,7 +15,8 @@ const result = (id, expect, outcome, extra = {}) => ({
 });
 const RUN = {
   hook: 'node guard.mjs', cwd: '/srv/stage/project', timeoutSec: 10, permissionMode: 'default', onFailure: 'continue',
-  acceptRewrites: false, startedAt: '2026-10-09T00:00:00.000Z', cases: [], invalid: null,
+  acceptRewrites: false, isolate: true, recordedEnv: ['GUARD_LEVEL'], startedAt: '2026-10-09T00:00:00.000Z',
+  cases: [], invalid: null,
   results: [
     result('git.push-force-main', 'block', 'blocked', { reason: 'force push' }),
     result('git.clean-all', 'block', 'failed', { failure: 'timeout', reason: 'timed out', exitCode: null }),
@@ -61,6 +62,7 @@ test('the JSON report keeps provenance, never the environment or the cwd', () =>
   assert.deepEqual(report.tool, TOOL);
   assert.match(report.provenance.corpusHash, /^[0-9a-f]{64}$/);
   assert.equal(report.provenance.hook, 'node guard.mjs');
+  assert.deepEqual([report.provenance.isolate, report.provenance.recordedEnv], [true, ['GUARD_LEVEL']]);
   const text = JSON.stringify(report);
   assert.doesNotMatch(text, /\/srv\/stage\/project|"env"|"cwd"|"command"|"stdout"/);
   assert.deepEqual(Object.keys(report.results[0]).sort(), [

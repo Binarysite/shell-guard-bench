@@ -127,6 +127,8 @@ export function buildReport(run, summary) {
       permissionMode: run.permissionMode,
       onFailure: run.onFailure,
       acceptRewrites: run.acceptRewrites,
+      isolate: run.isolate,
+      recordedEnv: run.recordedEnv,
       startedAt: run.startedAt,
     },
     ...(run.invalid ? { invalid: run.invalid } : {}),
