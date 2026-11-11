@@ -6,6 +6,8 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-11
+
 ### Added
 
 - The corpus grows from 190 to 201 cases. New critical bases: `kill.pkill-node`
@@ -142,7 +144,8 @@ First release.
   `SetupError`.
 - Two toy guards and `npm run example`.
 
-[Unreleased]: https://github.com/Binarysite/shell-guard-bench/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Binarysite/shell-guard-bench/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Binarysite/shell-guard-bench/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Binarysite/shell-guard-bench/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Binarysite/shell-guard-bench/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Binarysite/shell-guard-bench/releases/tag/v0.1.0

@@ -22,7 +22,7 @@ git clone https://github.com/Binarysite/shell-guard-bench.git && cd shell-guard-
 <!-- example:start -->
 ```text
 $ guard-bench --hook "node examples/guards/anchored-regex.mjs" --cwd . --show 2
-shell-guard-bench 0.2.0  hook: node examples/guards/anchored-regex.mjs  cases: 201  contract: Claude Code hooks (checked 2026-10-09)
+shell-guard-bench 0.2.1  hook: node examples/guards/anchored-regex.mjs  cases: 201  contract: Claude Code hooks (checked 2026-10-09)
 
 category         dangerous  contained   leaked  controls  friction  not scored
 delete           41         12          29      13        0         0
@@ -69,7 +69,7 @@ Pass the `command` of the PreToolUse hook from your `settings.json` to `--hook`,
 each hook whose matcher covers `Bash`:
 
 ```bash
-npx --yes github:Binarysite/shell-guard-bench#v0.2.0 --hook "$HOME/.claude/hooks/guard.sh"
+npx --yes github:Binarysite/shell-guard-bench#v0.2.1 --hook "$HOME/.claude/hooks/guard.sh"
 ```
 
 The hook runs with `/bin/sh -c`, like Claude Code runs it. By default (`--isolate`) its working directory is an
@@ -90,14 +90,14 @@ The composite action runs the bench against a hook in your repository and append
 
 ```yaml
 - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-- uses: Binarysite/shell-guard-bench@v0.2.0
+- uses: Binarysite/shell-guard-bench@v0.2.1
   with:
     hook: ./hooks/guard.sh
     max-friction: '0.1'
 ```
 
 Inputs mirror the CLI flags (see [action.yml](action.yml)); outputs are `result`, `exit-code` and `report`.
-Without the action: `npx --yes github:Binarysite/shell-guard-bench#v0.2.0 --hook ./hooks/guard.sh --cwd . --md
+Without the action: `npx --yes github:Binarysite/shell-guard-bench#v0.2.1 --hook ./hooks/guard.sh --cwd . --md
 "$GITHUB_STEP_SUMMARY"`. For a ref that cannot move, pin a commit SHA after the `@` or `#`.
 
 In the CI of the guard itself, compare the base branch with the head:
@@ -231,7 +231,7 @@ console.log(summary.gate.pass, summary.critical.leaked, summary.containedInterva
 ```
 
 Types are in `index.d.ts`. `runBench` throws a `SetupError` with a `code` when the bench cannot go on. The package
-is not on npm: `npm install github:Binarysite/shell-guard-bench#v0.2.0`.
+is not on npm: `npm install github:Binarysite/shell-guard-bench#v0.2.1`.
 
 ## Limits
 
