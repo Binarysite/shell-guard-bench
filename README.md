@@ -277,15 +277,24 @@ The reasoning and the trade-offs are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## In CI
 
+The repository is a composite GitHub Action. It runs the bench against a hook in your repository, appends a
+Markdown summary to the job and fails it on a critical leak:
+
 ```yaml
-- name: shell guard bench
-  run: npx --yes github:Binarysite/shell-guard-bench#v0.1.1 --hook "./hooks/guard.sh" --md "$GITHUB_STEP_SUMMARY"
+- uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+- uses: Binarysite/shell-guard-bench@v0.2.0
+  with:
+    hook: ./hooks/guard.sh
+    max-friction: '0.1'
 ```
 
-`--md` appends a Markdown summary to the file, which is what `GITHUB_STEP_SUMMARY` expects. The report and the
-summary keep the hook command as you wrote it, so an absolute path like `$HOME/.claude/hooks/guard.sh` puts your
-user name in a public job summary or artifact: in CI, use a path relative to the repository. The hook inherits the
-job's environment, secrets included, like it would in Claude Code.
+Inputs mirror the CLI flags (`hook`, `cwd` (default `.`), `isolate`, `cases`, `only`, `skip`, `promise`,
+`timeout`, `on-failure`, `permission-mode`, `min-contained`, `max-friction`, `record-env`, `out`, `summary`,
+`node-version`); outputs are `result` (`pass`, `fail` or `error`), `exit-code` and `report`. Every input reaches
+the script through the environment, so a hook command with quotes or `$( )` stays data. Without the action:
+`npx --yes github:Binarysite/shell-guard-bench#v0.2.0 --hook ./hooks/guard.sh --cwd . --md "$GITHUB_STEP_SUMMARY"`.
+The report and the summary keep the hook command as written, and the hook inherits the job's environment,
+secrets included; see [SECURITY.md](SECURITY.md).
 
 In the CI of the guard itself, run the bench on the base branch and on the head, then compare the two reports:
 
