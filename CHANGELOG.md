@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- The hook runs isolated by default (`--isolate`): its working directory, `HOME`,
+  `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` are temporary directories.
+  `--no-isolate` restores the old behavior. Reports record `isolate`.
+- Three canaries instead of two, on random names and in random order: two
+  `touch` and one `rm -rf` of a directory the bench created. They use the same
+  `toolu_bench_<n>` ids as the cases, from one counter, so the first case id is
+  now `toolu_bench_4`.
+
+### Added
+
+- `--record-env NAME,...` lists the variables that configured a guard in the
+  report provenance, by name only.
+
+### Fixed
+
+- The no-exec tripwire test runs with `HOME` and `TMPDIR` in a throwaway
+  directory, so `/bin/rm -rf ~` could not reach the real home even if the bench
+  ever executed a case. It also checks that every process the bench starts is
+  `/bin/sh -c <hook>`.
+
 ## [0.1.1] - 2026-10-10
 
 - Install snippets and sample output in the README now point at v0.1.1.

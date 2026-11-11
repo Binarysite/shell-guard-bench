@@ -14,8 +14,10 @@ that triggered it. You should get an answer within a week.
 ## What the bench does to stay safe
 
 - Case commands only travel inside the JSON on the hook's stdin.
-- Two harmless canaries go first. If the hook runs one, at once or within a
-  second, the bench stops with exit 2 before any dangerous case is sent. The
+- Three harmless canaries go first, on random names: two create a file and one
+  removes a directory the bench created. If the hook runs one, at once or
+  within a second, the bench stops with exit 2 before any dangerous case is
+  sent. The
   files are checked again after the last case; a hook caught then has already
   received every case, and the run is marked invalid.
 - A test runs the whole corpus with shims of `rm`, `git`, `psql` and other
@@ -23,6 +25,8 @@ that triggered it. You should get an answer within a week.
   directory, and fails if any shim is invoked or the fake home changes. Another
   test checks that every process the bench starts is `/bin/sh -c <hook>`.
 - The hook runs in its own process group with a timeout and a hard deadline.
+- By default (`--isolate`) the hook's working directory, `HOME`,
+  `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` are temporary directories.
 - Reports keep the hook command and one line of at most 200 characters of the
   hook's stderr, reason and rewritten command, never the environment, the
   working directory or full output.
@@ -35,7 +39,7 @@ path relative to the repository.
 
 What it cannot do: stop a hook that does harm on its own. The canary is best
 effort: a hook that runs only some commands (say, only the ones that start with
-`rm`), or runs them later than the checks, is not caught. Run the bench against
-hooks you trust. A throwaway `--cwd` keeps guards that read their surroundings
-honest, but it does not protect `~` or absolute paths: for a hook you do not
-trust, use a container or a VM.
+`git`), or runs them later than the checks, is not caught. Run the bench against
+hooks you trust. Isolation points `HOME` and the working directory at temporary
+directories, but it does not protect absolute paths or the network: for a hook
+you do not trust, use a container or a VM.

@@ -12,8 +12,9 @@ measurement that works for every policy, and it is the part that was missing.
 **It measures text and never executes.** A guard only ever sees the text of a
 command, so the text is what the bench sends. Nothing in the corpus runs: the
 command travels inside the stdin JSON and is never part of a shell string. The
-one risk left is a hook that runs what it receives, so two harmless canaries
-(`touch` of a file in a fresh temporary directory) go first. The bench waits a
+one risk left is a hook that runs what it receives, so three harmless canaries
+go first: two `touch` a file and one runs `rm -rf` on a directory the bench
+created, all on random names in a fresh temporary directory. The bench waits a
 second for a hook that runs them in the background, and if a file appears it
 stops before any dangerous case is sent. The files are checked again after the
 last case, for a hook that runs things late; by then every case was sent, so
@@ -106,7 +107,11 @@ out. `transcript_path` points to an empty file the bench creates.
 
 **Process.** `/bin/sh -c "<hook>"` in `--cwd`, with the inherited environment
 minus the `OTEL_*` variables Claude Code strips, plus `CLAUDE_PROJECT_DIR=<cwd>`
-when it is not set. Default timeout 10 s (`--timeout`, in seconds, like
+when it is not set. With `--isolate` (the default) `HOME`, `XDG_CONFIG_HOME` and
+`XDG_CACHE_HOME` point at directories inside the bench's temporary directory, and
+`--cwd` defaults to an empty one there; `--no-isolate` keeps the real ones and the
+current directory. This is a bench choice, not part of the contract: Claude Code
+runs the hook with your real home. Default timeout 10 s (`--timeout`, in seconds, like
 `timeout` in settings.json; Claude Code's own default is 600 s).
 
 **Decision table.** stdout is parsed as JSON only when, trimmed, it starts with
@@ -156,10 +161,12 @@ not emulate that.
 
 ## Threat model
 
-- **The hook runs what it receives.** Canary before and after the run, with a
-  one-second wait for background execution, and tests with fixture hooks that
-  run it at once, a moment later from another process group, and on a later
-  call. A hook that runs only some commands, or waits longer, is not caught;
+- **The hook runs what it receives.** Three canaries before the run (two
+  `touch` and one `rm -rf` of a directory the bench created, on random names,
+  in random order, with the same `tool_use_id` format as the cases), checked
+  again after it, with a one-second wait for background execution. Tests use
+  fixture hooks that run them at once, run only `rm`, run them a moment later
+  from another process group, and run them on a later call. A hook that runs only some commands, or waits longer, is not caught;
   for an untrusted hook, use a container or a VM.
 - **Third-party `--cases`.** Data only, never interpolated into a shell. The
   PATH tripwire test runs the whole corpus, and another test loads a hostile
@@ -195,10 +202,11 @@ not emulate that.
   contract in its shell form; the exec form (`args`) is approximated by `sh -c`
   (join `command` and `args` into one quoted shell command).
   Windows is not supported.
-- The guard sees your real cwd and environment: guards that inspect the disk or
-  git give results that depend on where you run the bench. The hook inherits
-  the environment, CI secrets included, and the reports keep the hook command
-  as written, so an absolute path shows the user name.
+- Isolation covers HOME, the XDG config and cache directories and the working
+  directory, not the rest of the environment: the hook inherits it, CI secrets
+  included. With `--no-isolate`, guards that inspect the disk or git give
+  results that depend on where you run the bench. The reports keep the hook
+  command as written, so an absolute path shows the user name.
 - The canary is best effort: it catches a hook that runs every command, at once
   or within a second. It does not catch one that runs only some commands or
   waits longer, and a late catch comes after every case was sent.
