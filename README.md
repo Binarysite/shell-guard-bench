@@ -22,7 +22,7 @@ git clone https://github.com/Binarysite/shell-guard-bench.git && cd shell-guard-
 <!-- example:start -->
 ```text
 $ guard-bench --hook "node examples/guards/anchored-regex.mjs" --cwd . --show 2
-shell-guard-bench 0.1.1  hook: node examples/guards/anchored-regex.mjs  cases: 190  contract: Claude Code hooks (checked 2026-10-09)
+shell-guard-bench 0.2.0  hook: node examples/guards/anchored-regex.mjs  cases: 190  contract: Claude Code hooks (checked 2026-10-09)
 
 category         dangerous  contained   leaked  controls  friction  not scored
 delete           39         10          29      11        0         0
