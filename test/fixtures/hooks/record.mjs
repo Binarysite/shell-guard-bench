@@ -8,5 +8,7 @@ appendFileSync(process.argv[2], `${JSON.stringify({
   input: JSON.parse(stdin),
   cwd: process.cwd(),
   projectDir: process.env.CLAUDE_PROJECT_DIR ?? null,
+  home: process.env.HOME ?? null,
+  tmpdir: process.env.TMPDIR ?? null,
   otel: Object.keys(process.env).filter((k) => k.startsWith('OTEL_')),
 })}\n`);
