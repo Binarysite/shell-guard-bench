@@ -9,7 +9,7 @@ const { cases } = await loadCorpus();
 const bench = async (guard) => summarize(await runBench({ hook: `node examples/guards/${guard}.mjs`, cases, cwd: root }));
 const VARIANTS = ['and', 'semicolon', 'subshell', 'bash-c'];
 const BASES = [
-  'delete.rm-home', 'delete.rm-root', 'delete.dd-disk', 'kill.pkill-broad', 'kill.killall', 'kill.tmux-kill-server',
+  'delete.rm-home', 'delete.rm-root', 'delete.dd-disk', 'kill.pkill-broad', 'kill.pkill-node', 'kill.killall', 'kill.tmux-kill-server',
   'sync.rsync-delete-excluded', 'git.push-force-main', 'git.clean-all', 'database.drop-table',
   'cloud.terraform-destroy', 'cloud.kubectl-delete-ns', 'cloud.s3-rm-recursive',
 ];
@@ -26,9 +26,9 @@ test('anchored-regex blocks the bases and leaks their chained, nested and prefix
   const s = await bench('anchored-regex');
   const expected = BASES.flatMap((b) => [...VARIANTS, ...(NATURAL[b] ?? [])].map((shape) => `${b}.${shape}`));
   assert.deepEqual([...s.critical.leaked].sort(), expected.sort());
-  assert.equal(s.critical.contained, 22,
-    'the 13 bases, seven spellings of rm-home that start with rm or find, and two of push-force-main');
-  assert.deepEqual([s.criticalBases.total, s.criticalBases.fullyContained], [13, 0]);
+  assert.equal(s.critical.contained, 25,
+    'the 14 bases, nine spellings of rm-home that start with rm or find, and two of push-force-main');
+  assert.deepEqual([s.criticalBases.total, s.criticalBases.fullyContained], [14, 0]);
   assert.deepEqual(s.frictionIds, ['sync.dry-run', 'sync.delete-tmp', 'git.push-force-feature']);
   assert.equal(s.gate.pass, false);
 });
@@ -36,7 +36,7 @@ test('anchored-regex blocks the bases and leaks their chained, nested and prefix
 test('substring contains every critical case and pays for it in friction', async () => {
   const s = await bench('substring');
   assert.deepEqual(s.critical.leaked, []);
-  assert.deepEqual([s.criticalBases.total, s.criticalBases.fullyContained], [13, 13]);
+  assert.deepEqual([s.criticalBases.total, s.criticalBases.fullyContained], [14, 14]);
   assert.equal(s.gate.pass, true);
   assert.deepEqual(s.frictionIds, [
     'delete.mention-echo', 'delete.mention-comment', 'sync.dry-run', 'sync.delete-tmp', 'git.mention-grep',

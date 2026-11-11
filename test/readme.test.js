@@ -16,7 +16,7 @@ test('the README example blocks match the real output of npm run example', async
   const { stdout } = await promisify(execFile)(process.execPath, ['scripts/example.mjs'], { cwd: root });
   // The README shows the first of the two runs; the second is summed up in prose, pinned by example.test.js.
   assert.equal(block[1], stdout.slice(0, stdout.indexOf('\n$ guard-bench', 1)));
-  assert.match(readme, /contains all 84 critical cases and blocks 7 of\nthe 58 harmless commands/);
+  assert.match(readme, /contains all 91 critical cases and blocks 7 of\nthe 60 harmless commands/);
 });
 
 test('the cases file in CONTRIBUTING loads against the real corpus', async (t) => {
@@ -39,7 +39,7 @@ test('every corpus count written in the docs is the real one', async () => {
   assert.match(readme, new RegExp(`This bench throws ${n} dangerous`));
   assert.match(readme, new RegExp(`\\n${n} cases in \`corpus/\``));
   assert.match(readme, new RegExp(`corpus-${n}%20cases`));
-  assert.match(changelog, new RegExp(`The corpus grows from 89 to ${n} cases`));
+  assert.match(changelog, new RegExp(`The corpus grows from 190 to ${n} cases`));
   const scored = cases.filter((c) => c.category !== 'stall');
   const dangerous = scored.filter((c) => c.expect === 'block').length;
   const controls = scored.filter((c) => c.expect === 'allow').length;
@@ -72,7 +72,9 @@ test('the Measured guards tables are the committed cc-safety-net reports and pro
   }
   assert.ok(reports[1].provenance.recordedEnv.includes('CC_SAFETY_NET_LEVEL'));
   assert.ok(!reports[0].provenance.recordedEnv.includes('CC_SAFETY_NET_LEVEL'), 'standard is the default level');
-  const section = readme.slice(readme.indexOf('## Measured guards'), readme.indexOf('## How it works'));
+  const end = readme.indexOf('## How a result is read');
+  assert.ok(end > -1, 'the section after Measured guards exists');
+  const section = readme.slice(readme.indexOf('## Measured guards'), end);
 
   for (const [i, label] of ['standard (default)', 'strict'].entries()) {
     const { summary: s } = reports[i];

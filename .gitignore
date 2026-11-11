@@ -1,6 +1,7 @@
 node_modules/
 reports/*
 !reports/cc-safety-net-*.json
+!reports/archive/
 .env
 .env.*
 *.log

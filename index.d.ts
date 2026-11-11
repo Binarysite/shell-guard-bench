@@ -15,7 +15,8 @@ export type Shape =
   | 'eval' | 'ssh' | 'sudo' | 'env-prefix' | 'abs-path' | 'builtin-bypass' | 'xargs' | 'find' | 'heredoc'
   | 'refspec' | 'comment' | 'mention-echo' | 'mention-grep' | 'quote-split' | 'var-indirection' | 'base64-pipe'
   | 'line-continuation' | 'background' | 'flag-order' | 'flag-split' | 'long-flags' | 'home-var' | 'find-exec'
-  | 'cmd-subst' | 'function' | 'python-c' | 'node-e' | 'short-flag';
+  | 'cmd-subst' | 'function' | 'python-c' | 'node-e' | 'short-flag'
+  | 'trailing-slash' | 'glob';
 export type PermissionMode = 'default' | 'plan' | 'acceptEdits' | 'auto' | 'dontAsk' | 'bypassPermissions';
 export type OnFailure = 'continue' | 'block';
 

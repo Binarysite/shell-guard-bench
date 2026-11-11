@@ -6,6 +6,32 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The corpus grows from 190 to 201 cases. New critical bases: `kill.pkill-node`
+  (`pkill -f node`, any platform) with its four required forms; new variants of
+  `rm -rf ~`: `rm -rf ~/` and `rm -rf ~/*`; `secrets.curl-pipe-sh` (high). New
+  controls: `rm -rf ~/.cache/pip`, `rm -rf "$HOME/tmp/scratch-123"`, and an unscored
+  `pkill -f "vite --port 5173"`. Two new shapes: `trailing-slash` and `glob`.
+- `docs/REPRODUCE.md`: the steps to re-run the cc-safety-net measurement.
+
+### Changed
+
+- `kill.pkill-broad` says in its note that the broad match is BSD (macOS) behavior.
+- The README "Measured guards" section is cut to the two tables and three bullets
+  and says that the cc-safety-net numbers were measured on corpus v0.2.0 (190
+  cases): the 11 new cases were not run against it.
+- Corrections to the cc-safety-net notes: its docs do list `rsync -a --delete src/ ~/`
+  and a literal `shutil.rmtree('/')`; the bench's cases are rsync to a remote host
+  and interpreter code that computes the path. The map's authorship line now says
+  the maps were written after the 2026-10-10 run had been seen.
+- The 2026-10-10 cc-safety-net reports moved to `reports/archive/`.
+
+### Fixed
+
+- `test/readme.test.js` sliced the "Measured guards" section with a heading that
+  does not exist; it now ends at "How a result is read" and asserts the heading.
+
 ## [0.2.0] - 2026-11-11
 
 ### Changed

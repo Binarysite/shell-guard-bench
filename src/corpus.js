@@ -18,7 +18,7 @@ export const SHAPES = Object.freeze([
   'sudo', 'env-prefix', 'abs-path', 'builtin-bypass', 'xargs', 'find', 'heredoc', 'refspec', 'comment',
   'mention-echo', 'mention-grep', 'quote-split', 'var-indirection', 'base64-pipe', 'line-continuation', 'background',
   'flag-order', 'flag-split', 'long-flags', 'home-var', 'find-exec', 'cmd-subst', 'function', 'python-c', 'node-e',
-  'short-flag',
+  'short-flag', 'trailing-slash', 'glob',
 ]);
 /** Every critical base case must also be caught in these forms. */
 export const REQUIRED_SHAPES = Object.freeze(['and', 'semicolon', 'subshell', 'bash-c']);
