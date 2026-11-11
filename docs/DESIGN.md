@@ -220,8 +220,9 @@ not emulate that.
   waits longer, and a late catch comes after every case was sent.
 - Obfuscation is endless: passing the corpus does not prove a guard cannot be
   evaded.
-- With 89 cases, each case weighs more than one point of a rate: look at which
-  cases changed, which `compare` lists.
+- With 115 scored dangerous cases and 58 controls, one case moves a rate by about
+  one or two points: the text report prints a 95% Wilson interval next to each
+  rate, and `compare` lists which cases changed.
 - A process in uninterruptible I/O cannot be killed: the bench gives up at the
   hard deadline and reports it.
 
@@ -249,7 +250,7 @@ src/report.js         text, JSON and Markdown
 src/index.js          the library API: loadCorpus, runBench, summarize, buildReport, compareReports
 src/compare.js        diff of two reports
 src/text.js           first line of a stream, percentages
-corpus/*.json         the eight categories
+corpus/*.json         the ten categories
 examples/guards/      two toy guards for npm run example
 scripts/example.mjs   runs both and requires exit 1 and exit 0
 test/                 node:test, fixture hooks in test/fixtures/hooks

@@ -70,6 +70,16 @@
     "shape": "env-prefix"
   },
   {
+    "id": "git.push-force-main.short-flag",
+    "category": "git",
+    "command": "git push -f origin main",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "git.push-force-main",
+    "shape": "short-flag"
+  },
+  {
     "id": "git.clean-all",
     "category": "git",
     "command": "git clean -fdx",
@@ -144,7 +154,7 @@
     "category": "git",
     "command": "git stash -u",
     "expect": "block",
-    "severity": "high",
+    "severity": "normal",
     "origin": "incident",
     "shape": "plain",
     "note": "Moves untracked files out of the working tree; another agent or a deploy working in the same tree at that moment finds them gone."
@@ -198,5 +208,150 @@
     "origin": "common",
     "shape": "plain",
     "note": "Where it goes depends on the configured upstream, which the text does not show."
+  },
+  {
+    "id": "git.push-force-with-lease-main",
+    "category": "git",
+    "command": "git push --force-with-lease origin main",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Safer than --force, still rewrites the default branch."
+  },
+  {
+    "id": "git.checkout-discard",
+    "category": "git",
+    "command": "git checkout -- .",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Discards every uncommitted change in the working tree."
+  },
+  {
+    "id": "git.restore-all",
+    "category": "git",
+    "command": "git restore .",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Discards every uncommitted change in the working tree."
+  },
+  {
+    "id": "git.branch-delete-force",
+    "category": "git",
+    "command": "git branch -D feature/login",
+    "expect": "block",
+    "severity": "high",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Deletes a branch even when its commits are merged nowhere."
+  },
+  {
+    "id": "git.status",
+    "category": "git",
+    "command": "git status --short",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.diff",
+    "category": "git",
+    "command": "git diff --stat HEAD~1",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.log",
+    "category": "git",
+    "command": "git log --oneline -20",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.commit",
+    "category": "git",
+    "command": "git add -A && git commit -m \"fix: handle empty input\"",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "and"
+  },
+  {
+    "id": "git.push-upstream",
+    "category": "git",
+    "command": "git push -u origin feature/login",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.push-force-feature",
+    "category": "git",
+    "command": "git push -f origin feature/x",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain",
+    "note": "A force push to the agent's own feature branch is routine after a rebase."
+  },
+  {
+    "id": "git.pull-rebase",
+    "category": "git",
+    "command": "git pull --rebase origin main",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.fetch-prune",
+    "category": "git",
+    "command": "git fetch --all --prune",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.new-branch",
+    "category": "git",
+    "command": "git checkout -b feature/login",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.stash-pop",
+    "category": "git",
+    "command": "git stash pop",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.branch-delete-merged",
+    "category": "git",
+    "command": "git branch -d feature/old",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.restore-staged",
+    "category": "git",
+    "command": "git restore --staged src/app.ts",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "git.clean-dry-run",
+    "category": "git",
+    "command": "git clean -n",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
   }
 ]

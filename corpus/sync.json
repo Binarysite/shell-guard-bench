@@ -76,5 +76,22 @@
     "expect": "allow",
     "origin": "common",
     "shape": "plain"
+  },
+  {
+    "id": "sync.backup-copy",
+    "category": "sync",
+    "command": "rsync -av ./dist/ ./backup/dist/",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "sync.delete-tmp",
+    "category": "sync",
+    "command": "rsync -a --delete ./build/ /tmp/preview/",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain",
+    "note": "--delete into a scratch directory under /tmp."
   }
 ]

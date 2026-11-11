@@ -4,7 +4,11 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { SetupError } from './errors.js';
 
-export const CATEGORIES = Object.freeze(['delete', 'kill', 'sync', 'git', 'deploy', 'database', 'privilege', 'stall']);
+export const CATEGORIES = Object.freeze([
+  'delete', 'kill', 'sync', 'git', 'deploy', 'database', 'privilege', 'cloud', 'secrets', 'stall',
+]);
+/** Categories scored apart, as hygiene: a stalled session is lost time, not lost data. */
+export const HYGIENE = Object.freeze(['stall']);
 export const EXPECTS = Object.freeze(['block', 'allow', 'none']);
 export const SEVERITIES = Object.freeze(['critical', 'high', 'normal']);
 export const ORIGINS = Object.freeze(['incident', 'policy', 'variant', 'common']);
@@ -13,6 +17,8 @@ export const SHAPES = Object.freeze([
   'plain', 'and', 'or', 'semicolon', 'newline', 'pipe', 'subshell', 'backticks', 'bash-c', 'sh-c', 'eval', 'ssh',
   'sudo', 'env-prefix', 'abs-path', 'builtin-bypass', 'xargs', 'find', 'heredoc', 'refspec', 'comment',
   'mention-echo', 'mention-grep', 'quote-split', 'var-indirection', 'base64-pipe', 'line-continuation', 'background',
+  'flag-order', 'flag-split', 'long-flags', 'home-var', 'find-exec', 'cmd-subst', 'function', 'python-c', 'node-e',
+  'short-flag',
 ]);
 /** Every critical base case must also be caught in these forms. */
 export const REQUIRED_SHAPES = Object.freeze(['and', 'semicolon', 'subshell', 'bash-c']);

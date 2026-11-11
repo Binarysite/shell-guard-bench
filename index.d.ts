@@ -4,7 +4,8 @@
 // provides what is declared here). test/types.test.js checks the other way: the
 // unions below list exactly the runtime values, and every runtime export is declared.
 
-export type Category = 'delete' | 'kill' | 'sync' | 'git' | 'deploy' | 'database' | 'privilege' | 'stall';
+export type Category =
+  | 'delete' | 'kill' | 'sync' | 'git' | 'deploy' | 'database' | 'privilege' | 'cloud' | 'secrets' | 'stall';
 /** `none` cases are run and printed but not scored. */
 export type Expect = 'block' | 'allow' | 'none';
 export type Severity = 'critical' | 'high' | 'normal';
@@ -13,7 +14,8 @@ export type Shape =
   | 'plain' | 'and' | 'or' | 'semicolon' | 'newline' | 'pipe' | 'subshell' | 'backticks' | 'bash-c' | 'sh-c'
   | 'eval' | 'ssh' | 'sudo' | 'env-prefix' | 'abs-path' | 'builtin-bypass' | 'xargs' | 'find' | 'heredoc'
   | 'refspec' | 'comment' | 'mention-echo' | 'mention-grep' | 'quote-split' | 'var-indirection' | 'base64-pipe'
-  | 'line-continuation' | 'background';
+  | 'line-continuation' | 'background' | 'flag-order' | 'flag-split' | 'long-flags' | 'home-var' | 'find-exec'
+  | 'cmd-subst' | 'function' | 'python-c' | 'node-e' | 'short-flag';
 export type PermissionMode = 'default' | 'plan' | 'acceptEdits' | 'auto' | 'dontAsk' | 'bypassPermissions';
 export type OnFailure = 'continue' | 'block';
 
@@ -77,6 +79,7 @@ export interface CaseResult {
   expect: Expect;
   severity: Severity | null;
   origin: Origin;
+  variantOf: string | null;
   command: string;
   note: string | null;
   outcome: Outcome;
@@ -127,18 +130,28 @@ export interface CategorySummary {
   notScored: number;
 }
 
+/** A 95% Wilson score interval, [low, high]; null when nothing was measured. */
+export type Interval = [number, number] | null;
+
 export interface Summary {
   cases: number;
+  /** Dangerous cases outside the hygiene categories (stall); the same for controls and the rates. */
   dangerous: number;
   contained: number;
   /** null when there are no dangerous cases. */
   containedRate: number | null;
+  containedInterval: Interval;
   controls: number;
   friction: number;
   /** null when there are no controls. */
   frictionRate: number | null;
+  frictionInterval: Interval;
   notScored: number;
   critical: { total: number; contained: number; leaked: string[] };
+  /** Critical incident and policy bases, and those with a critical form (base or variant) that leaked. */
+  criticalBases: { total: number; fullyContained: number; partial: { id: string; forms: number; contained: number }[] };
+  /** The stall category, scored apart: lost time, not lost data. */
+  hygiene: { dangerous: number; contained: number; leaked: string[]; controls: number; friction: string[] };
   byCategory: Partial<Record<Category, CategorySummary>>;
   /** Dangerous cases not contained, critical first. */
   leaked: string[];
@@ -160,6 +173,7 @@ export interface ReportResult {
   expect: Expect;
   severity: Severity | null;
   origin: Origin;
+  variantOf: string | null;
   outcome: Outcome;
   contained: boolean;
   friction: boolean;

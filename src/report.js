@@ -1,7 +1,7 @@
 // Text, JSON and Markdown views of a run. The text is deterministic: no timings,
 // no absolute paths, no color, so two runs of the same guard diff cleanly.
 import { CONTRACT, MIXED_WARNING } from './classify.js';
-import { corpusHash } from './corpus.js';
+import { HYGIENE, corpusHash } from './corpus.js';
 import { SCHEMA_VERSION, TOOL } from './meta.js';
 import { pct, printable } from './text.js';
 
@@ -31,16 +31,43 @@ function table(rows) {
 
 const TABLE_HEAD = ['category', 'dangerous', 'contained', 'leaked', 'controls', 'friction', 'not scored'];
 
+/** Category rows, the total of the scored ones, then the hygiene rows, which the total leaves out. */
 function categoryRows(summary) {
-  const rows = Object.entries(summary.byCategory).map(([name, c]) => [
-    name, c.dangerous, c.contained, c.leaked, c.controls, c.friction, c.notScored,
-  ]);
+  const row = ([name, c]) => [name, c.dangerous, c.contained, c.leaked, c.controls, c.friction, c.notScored];
+  const entries = Object.entries(summary.byCategory);
+  const rows = entries.filter(([name]) => !HYGIENE.includes(name)).map(row);
+  const scoredNotScored = rows.reduce((n, r) => n + Number(r[6]), 0);
   rows.push([
     'total', summary.dangerous, `${summary.contained} (${pct(summary.containedRate)})`,
     summary.dangerous - summary.contained, summary.controls,
-    `${summary.friction} (${pct(summary.frictionRate)})`, summary.notScored,
+    `${summary.friction} (${pct(summary.frictionRate)})`, scoredNotScored,
   ]);
+  for (const [name, c] of entries.filter(([n]) => HYGIENE.includes(n))) rows.push(row([`${name} (hygiene)`, c]));
   return rows;
+}
+
+/** "49 of 69 (71.0%, 95% CI 59.4% to 80.4%)" */
+const rate = (part, whole, value, interval) => `${part} of ${whole} (${pct(value)}`
+  + `${interval ? `, 95% CI ${pct(interval[0])} to ${pct(interval[1])}` : ''})`;
+
+function rateLine(summary) {
+  return `Contained ${rate(summary.contained, summary.dangerous, summary.containedRate, summary.containedInterval)}`
+    + `; friction ${rate(summary.friction, summary.controls, summary.frictionRate, summary.frictionInterval)}`;
+}
+
+function basesLine(summary, show) {
+  const b = summary.criticalBases;
+  const partial = b.partial.slice(0, show).map((p) => `${p.id} ${p.contained}/${p.forms}`);
+  const more = b.partial.length > show ? ` and ${b.partial.length - show} more` : '';
+  return `Critical bases ${b.total}  fully contained ${b.fullyContained}`
+    + `${partial.length ? `  partial: ${partial.join(', ')}${more}` : ''}`;
+}
+
+function hygieneLine(summary) {
+  const h = summary.hygiene;
+  if (!h.dangerous && !h.controls) return null;
+  return `Hygiene (${HYGIENE.join(', ')}, not in the rates): ${h.contained} of ${h.dangerous} contained, `
+    + `${h.friction.length} of ${h.controls} controls blocked`;
 }
 
 /** @param {{ hook: string, results: unknown[] }} run */
@@ -84,7 +111,11 @@ export function formatText(run, summary, { out = 'the JSON report', withHeader =
   const byId = new Map(run.results.map((r) => [r.id, r]));
   const lines = [...(withHeader ? [header(run), ''] : []), table([TABLE_HEAD, ...categoryRows(summary)]), ''];
   const c = summary.critical;
+  lines.push(rateLine(summary));
   lines.push(`Critical ${c.total}  contained ${c.contained}  leaked ${c.leaked.length}`);
+  lines.push(basesLine(summary, summary.show));
+  const hygiene = hygieneLine(summary);
+  if (hygiene) lines.push(hygiene);
 
   const list = (ids, render) => {
     for (const id of ids.slice(0, summary.show)) lines.push(render(byId.get(id)));
@@ -147,6 +178,7 @@ export function buildReport(run, summary) {
       expect: r.expect,
       severity: r.severity,
       origin: r.origin,
+      variantOf: r.variantOf ?? null,
       outcome: r.outcome,
       contained: r.contained,
       friction: r.friction,
@@ -184,10 +216,16 @@ export function formatMarkdown(run, summary) {
     row(TABLE_HEAD.map(() => '---')),
     ...categoryRows(summary).map(row),
     '',
+    `${rateLine(summary)}.`,
+    '',
+    `${basesLine(summary, Infinity)}.`,
+    '',
     `Critical leaked: ${ids(summary.critical.leaked)}`,
     '',
     `Friction: ${ids(summary.frictionIds)}`,
   ];
+  const hygiene = hygieneLine(summary);
+  if (hygiene) lines.push('', `${hygiene}.`);
   const failOpen = failOpenLine(summary);
   if (failOpen) lines.push('', failOpen);
   const ignored = ignoredLine(summary, ids);

@@ -21,7 +21,8 @@ import { nodeHook, tempDir } from './helpers.js';
 const TRAPPED = [
   'rm', 'pkill', 'killall', 'tmux', 'rsync', 'git', 'psql', 'pg_dump', 'vercel', 'netlify', 'firebase', 'sudo',
   'find', 'xargs', 'kill', 'bash', 'sh', 'ssh', 'chmod', 'chown', 'tee', 'curl', 'base64', 'osascript',
-  'dd', 'mkfs', 'mkfs.ext4', 'terraform', 'kubectl', 'aws', 'python', 'python3', 'docker',
+  'dd', 'mkfs', 'mkfs.ext4', 'terraform', 'kubectl', 'aws', 'python', 'python3', 'docker', 'node', 'npm', 'npx',
+  'cat', 'ssh-keygen', 'sqlite3', 'lsblk',
 ];
 
 /** Sets env variables for one test and puts them back after it. */

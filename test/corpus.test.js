@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadCorpus, SetupError } from '../src/index.js';
-import { CATEGORIES, MAX_NOTE, REQUIRED_SHAPES, crossCheck, matches, validateCases } from '../src/corpus.js';
+import { CATEGORIES, MAX_NOTE, REQUIRED_SHAPES, SHAPES, crossCheck, matches, validateCases } from '../src/corpus.js';
 import { tempDir } from './helpers.js';
 
 const base = {
@@ -42,7 +42,7 @@ test('a variant must point at a case of the same category and expect', () => {
 test('the coverage rule: every critical base has and, semicolon, subshell and bash-c variants', async () => {
   const { cases } = await loadCorpus();
   const bases = cases.filter((c) => ['incident', 'policy'].includes(c.origin) && c.severity === 'critical');
-  assert.equal(bases.length, 8);
+  assert.equal(bases.length, 13);
   for (const b of bases) {
     const shapes = cases.filter((c) => c.variantOf === b.id).map((c) => c.shape);
     for (const shape of REQUIRED_SHAPES) assert.ok(shapes.includes(shape), `${b.id} lacks ${shape}`);
@@ -51,13 +51,17 @@ test('the coverage rule: every critical base has and, semicolon, subshell and ba
   assert.throws(() => crossCheck(without, { coverage: true }), /git\.clean-all: .*subshell/);
 });
 
-test('the bundled corpus: eight categories, notes within the limit, obfuscations are high', async () => {
+test('the bundled corpus: every category and every declared shape, notes within the limit, obfuscations are high', async () => {
   const { cases, overridden } = await loadCorpus();
   assert.deepEqual(overridden, []);
   assert.deepEqual([...new Set(cases.map((c) => c.category))], CATEGORIES);
-  assert.ok(cases.length >= 80 && cases.length <= 90, `${cases.length} cases`);
+  assert.deepEqual(SHAPES.filter((s) => !cases.some((c) => c.shape === s)), [], 'a declared shape has no case');
+  assert.ok(cases.filter((c) => c.expect === 'allow' && c.category !== 'stall').length >= 55, 'harmless controls');
+  assert.ok(cases.length >= 180 && cases.length <= 200, `${cases.length} cases`);
   assert.ok(cases.every((c) => (c.note ?? '').length <= MAX_NOTE));
-  for (const c of cases.filter((x) => ['quote-split', 'var-indirection', 'base64-pipe'].includes(x.shape))) {
+  const obfuscations = ['quote-split', 'var-indirection', 'base64-pipe', 'backticks', 'eval', 'cmd-subst', 'function',
+    'python-c', 'node-e'];
+  for (const c of cases.filter((x) => obfuscations.includes(x.shape))) {
     assert.equal(c.severity, 'high', c.id);
   }
   assert.ok(cases.some((c) => c.command.includes('\n')), 'multi-line commands are part of the corpus');
@@ -84,7 +88,7 @@ test('--cases adds cases and replaces a bundled id in place, and the filters sel
   assert.deepEqual(only.cases.map((c) => c.id), [
     'sync.rsync-delete-excluded', 'sync.rsync-delete-excluded.and', 'sync.rsync-delete-excluded.semicolon',
     'sync.rsync-delete-excluded.subshell', 'sync.rsync-delete-excluded.bash-c', 'sync.rsync-delete-excluded.ssh',
-    'sync.dry-run', 'sync.no-delete', 'git.push-main', 'git.push-main.refspec',
+    'sync.dry-run', 'sync.no-delete', 'sync.backup-copy', 'sync.delete-tmp', 'git.push-main', 'git.push-main.refspec',
   ]);
   const skipped = await loadCorpus({ skip: ['stall', 'delete.rm-home'] });
   assert.ok(!skipped.cases.some((c) => c.category === 'stall' || c.id.startsWith('delete.rm-home')));

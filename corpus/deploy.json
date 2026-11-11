@@ -45,5 +45,29 @@
     "origin": "common",
     "shape": "plain",
     "note": "Without --prod the CLI makes a preview deployment."
+  },
+  {
+    "id": "deploy.build",
+    "category": "deploy",
+    "command": "npm run build",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "deploy.publish-dry-run",
+    "category": "deploy",
+    "command": "npm publish --dry-run",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "deploy.docker-build",
+    "category": "deploy",
+    "command": "docker build -t app:dev .",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
   }
 ]

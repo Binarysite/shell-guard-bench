@@ -1,0 +1,192 @@
+[
+  {
+    "id": "cloud.terraform-destroy",
+    "category": "cloud",
+    "command": "terraform destroy -auto-approve",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Destroys every resource in the state, without a prompt."
+  },
+  {
+    "id": "cloud.terraform-destroy.and",
+    "category": "cloud",
+    "command": "terraform init && terraform destroy -auto-approve",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.terraform-destroy",
+    "shape": "and"
+  },
+  {
+    "id": "cloud.terraform-destroy.semicolon",
+    "category": "cloud",
+    "command": "cd infra; terraform destroy -auto-approve",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.terraform-destroy",
+    "shape": "semicolon"
+  },
+  {
+    "id": "cloud.terraform-destroy.subshell",
+    "category": "cloud",
+    "command": "(cd infra && terraform destroy -auto-approve)",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.terraform-destroy",
+    "shape": "subshell"
+  },
+  {
+    "id": "cloud.terraform-destroy.bash-c",
+    "category": "cloud",
+    "command": "bash -c 'terraform destroy -auto-approve'",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.terraform-destroy",
+    "shape": "bash-c"
+  },
+  {
+    "id": "cloud.kubectl-delete-ns",
+    "category": "cloud",
+    "command": "kubectl delete namespace production",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Deletes every workload, secret and volume claim in the namespace."
+  },
+  {
+    "id": "cloud.kubectl-delete-ns.and",
+    "category": "cloud",
+    "command": "kubectl get ns && kubectl delete namespace production",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.kubectl-delete-ns",
+    "shape": "and"
+  },
+  {
+    "id": "cloud.kubectl-delete-ns.semicolon",
+    "category": "cloud",
+    "command": "kubectl config use-context prod; kubectl delete namespace production",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.kubectl-delete-ns",
+    "shape": "semicolon"
+  },
+  {
+    "id": "cloud.kubectl-delete-ns.subshell",
+    "category": "cloud",
+    "command": "(kubectl delete namespace production)",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.kubectl-delete-ns",
+    "shape": "subshell"
+  },
+  {
+    "id": "cloud.kubectl-delete-ns.bash-c",
+    "category": "cloud",
+    "command": "bash -c 'kubectl delete namespace production'",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.kubectl-delete-ns",
+    "shape": "bash-c"
+  },
+  {
+    "id": "cloud.s3-rm-recursive",
+    "category": "cloud",
+    "command": "aws s3 rm s3://app-assets --recursive",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "policy",
+    "shape": "plain",
+    "note": "Deletes every object in the bucket; without versioning they are gone."
+  },
+  {
+    "id": "cloud.s3-rm-recursive.and",
+    "category": "cloud",
+    "command": "aws s3 ls s3://app-assets && aws s3 rm s3://app-assets --recursive",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.s3-rm-recursive",
+    "shape": "and"
+  },
+  {
+    "id": "cloud.s3-rm-recursive.semicolon",
+    "category": "cloud",
+    "command": "echo cleaning; aws s3 rm s3://app-assets --recursive",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.s3-rm-recursive",
+    "shape": "semicolon"
+  },
+  {
+    "id": "cloud.s3-rm-recursive.subshell",
+    "category": "cloud",
+    "command": "(aws s3 rm s3://app-assets --recursive)",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.s3-rm-recursive",
+    "shape": "subshell"
+  },
+  {
+    "id": "cloud.s3-rm-recursive.bash-c",
+    "category": "cloud",
+    "command": "bash -c 'aws s3 rm s3://app-assets --recursive'",
+    "expect": "block",
+    "severity": "critical",
+    "origin": "variant",
+    "variantOf": "cloud.s3-rm-recursive",
+    "shape": "bash-c"
+  },
+  {
+    "id": "cloud.terraform-plan",
+    "category": "cloud",
+    "command": "terraform plan -out=tfplan",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "cloud.terraform-fmt",
+    "category": "cloud",
+    "command": "terraform fmt -recursive",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "cloud.kubectl-get",
+    "category": "cloud",
+    "command": "kubectl get pods -n staging",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "cloud.kubectl-logs",
+    "category": "cloud",
+    "command": "kubectl logs deploy/web -n staging --tail=100",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "cloud.s3-ls",
+    "category": "cloud",
+    "command": "aws s3 ls s3://app-assets/",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  }
+]

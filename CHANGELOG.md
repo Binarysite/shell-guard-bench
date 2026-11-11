@@ -4,6 +4,10 @@
 
 ### Changed
 
+- `stall` cases are scored apart as hygiene (`summary.hygiene`) and left out of
+  `dangerous`, `controls` and both rates; `--min-contained` and
+  `--max-friction` gate on the rest. `git.stash-untracked` is now `normal`.
+- Results and report rows carry `variantOf`.
 - The hook runs isolated by default (`--isolate`): its working directory, `HOME`,
   `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` are temporary directories.
   `--no-isolate` restores the old behavior. Reports record `isolate`.
@@ -14,6 +18,18 @@
 
 ### Added
 
+- The corpus grows from 89 to 190 cases in ten categories (new: `cloud` and
+  `secrets`). Every declared shape now has a case: `||`, newline, backticks,
+  `sh -c`, `eval`, `xargs`, line continuation, plus new shapes for flag
+  spellings, `"$HOME"`, `find -exec`, `$(printf r)m`, shell functions and
+  `python3 -c` / `node -e`. New critical bases: `rm -rf /`, `dd` to a disk,
+  `terraform destroy`, `kubectl delete namespace` and `aws s3 rm --recursive`,
+  each with its required forms. 51 new harmless controls, 43 of them outside
+  `stall`.
+- The summary reports per-base results (`criticalBases`: a base counts as
+  fully contained only when every critical form of it is) and 95% Wilson
+  intervals for the containment and friction rates (`containedInterval`,
+  `frictionInterval`), printed in the text and Markdown reports.
 - A result whose stdout is text with a decision JSON line in it (`checking...`
   then a deny, or a deny then `ok`) carries the warning "decision JSON mixed
   with text; Claude Code ignores it". The summary counts them as

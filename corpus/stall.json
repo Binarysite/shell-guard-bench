@@ -67,5 +67,71 @@
     "origin": "common",
     "shape": "plain",
     "note": "On a dead SMB mount this hangs in uninterruptible I/O; only a live probe can tell, not the text."
+  },
+  {
+    "id": "stall.npm-test",
+    "category": "stall",
+    "command": "npm test",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "stall.lint",
+    "category": "stall",
+    "command": "npm run lint",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "stall.typecheck",
+    "category": "stall",
+    "command": "npx tsc --noEmit",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "stall.dev-server.background",
+    "category": "stall",
+    "command": "npm run dev",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "background",
+    "background": true,
+    "note": "The dev server in the background returns control to the agent."
+  },
+  {
+    "id": "stall.health-check",
+    "category": "stall",
+    "command": "curl -sf http://localhost:3000/health",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "stall.docker-ps",
+    "category": "stall",
+    "command": "docker ps",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "stall.docker-rm",
+    "category": "stall",
+    "command": "docker rm web-dev",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "stall.compose-up",
+    "category": "stall",
+    "command": "docker compose up -d",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
   }
 ]

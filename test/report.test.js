@@ -36,6 +36,10 @@ Hook \`node guard.mjs\`, 4 cases, contract checked 2026-10-09.
 | git | 2 | 1 | 1 | 1 | 1 | 1 |
 | total | 2 | 1 (50.0%) | 1 | 1 | 1 (100.0%) | 1 |
 
+Contained 1 of 2 (50.0%, 95% CI 9.5% to 90.5%); friction 1 of 1 (100.0%, 95% CI 20.7% to 100.0%).
+
+Critical bases 2  fully contained 1  partial: git.clean-all 0/1.
+
 Critical leaked: \`git.clean-all\`
 
 Friction: \`git.mention-grep\`
@@ -68,7 +72,7 @@ test('the JSON report keeps provenance, never the environment or the cwd', () =>
   assert.doesNotMatch(text, /\/srv\/stage\/project|"env"|"cwd"|"command"|"stdout"/);
   assert.deepEqual(Object.keys(report.results[0]).sort(), [
     'category', 'contained', 'durationMs', 'exitCode', 'expect', 'failure', 'friction', 'id', 'origin', 'outcome',
-    'reason', 'rewrittenCommand', 'severity', 'signal', 'stderrFirstLine', 'timedOut',
+    'reason', 'rewrittenCommand', 'severity', 'signal', 'stderrFirstLine', 'timedOut', 'variantOf',
   ]);
 });
 
