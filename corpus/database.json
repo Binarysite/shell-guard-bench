@@ -94,5 +94,29 @@
     "expect": "allow",
     "origin": "common",
     "shape": "plain"
+  },
+  {
+    "id": "database.list-tables",
+    "category": "database",
+    "command": "psql \"$DATABASE_URL\" -c \"\\dt\"",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "database.dump",
+    "category": "database",
+    "command": "pg_dump \"$DATABASE_URL\" > backup.sql",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "database.sqlite-tables",
+    "category": "database",
+    "command": "sqlite3 dev.db \".tables\"",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
   }
 ]

@@ -47,7 +47,7 @@ test('a run reports overrides, honors the gate flags and exits 1 on a leak', asy
     { id: 'privilege.chmod-script', category: 'privilege', command: 'chmod +x build.sh', expect: 'allow', origin: 'common' },
   ]));
   const { stdout } = await cli('--hook', 'exit 2', '--only', 'privilege', '-c', extra, '--out', out, '-v');
-  assert.match(stdout, /^shell-guard-bench .*cases: 4 .*\nOverridden by --cases: privilege\.chmod-script\n/);
+  assert.match(stdout, /^shell-guard-bench .*cases: 6 .*\nOverridden by --cases: privilege\.chmod-script\n/);
   assert.match(stdout, /^blocked {5}block {2}\[high\] privilege\.chmod-777 {2}sudo chmod -R 777 \/usr\/local$/m);
   assert.match(stdout, /RESULT: PASS/);
   await assert.rejects(
@@ -60,7 +60,7 @@ test('a run reports overrides, honors the gate flags and exits 1 on a leak', asy
   );
   await cli('--hook', 'exit 2', '--only', 'privilege', '--on-failure', 'block', '--permission-mode', 'auto', '--out', out);
   const { provenance } = JSON.parse(await readFile(out, 'utf8'));
-  assert.deepEqual([provenance.onFailure, provenance.permissionMode, provenance.cases], ['block', 'auto', 4]);
+  assert.deepEqual([provenance.onFailure, provenance.permissionMode, provenance.cases], ['block', 'auto', 6]);
   assert.equal(provenance.isolate, true, 'isolation is the default');
   await cli('--hook', 'exit 2', '--only', 'privilege', '--no-isolate', '--record-env', 'GUARD_LEVEL, GUARD_HOME',
     '--out', out);

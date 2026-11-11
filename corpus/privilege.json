@@ -33,5 +33,21 @@
     "expect": "allow",
     "origin": "common",
     "shape": "plain"
+  },
+  {
+    "id": "privilege.chmod-file",
+    "category": "privilege",
+    "command": "chmod 644 README.md",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
+  },
+  {
+    "id": "privilege.chmod-build",
+    "category": "privilege",
+    "command": "chmod -R u+w ./build",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
   }
 ]

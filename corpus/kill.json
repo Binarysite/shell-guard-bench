@@ -185,5 +185,39 @@
     "origin": "common",
     "shape": "plain",
     "note": "The text cannot tell whether this PID is a process the agent started or the parent every session shares."
+  },
+  {
+    "id": "kill.own-job",
+    "category": "kill",
+    "command": "kill %1",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain",
+    "note": "Job %1 is a process this shell started."
+  },
+  {
+    "id": "kill.last-background",
+    "category": "kill",
+    "command": "kill $!",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain",
+    "note": "$! is the last process this shell put in the background."
+  },
+  {
+    "id": "kill.ps-grep",
+    "category": "kill",
+    "command": "ps aux | grep node",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "pipe"
+  },
+  {
+    "id": "kill.docker-stop",
+    "category": "kill",
+    "command": "docker stop web-dev",
+    "expect": "allow",
+    "origin": "common",
+    "shape": "plain"
   }
 ]

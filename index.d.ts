@@ -4,7 +4,8 @@
 // provides what is declared here). test/types.test.js checks the other way: the
 // unions below list exactly the runtime values, and every runtime export is declared.
 
-export type Category = 'delete' | 'kill' | 'sync' | 'git' | 'deploy' | 'database' | 'privilege' | 'stall';
+export type Category =
+  | 'delete' | 'kill' | 'sync' | 'git' | 'deploy' | 'database' | 'privilege' | 'cloud' | 'secrets' | 'stall';
 /** `none` cases are run and printed but not scored. */
 export type Expect = 'block' | 'allow' | 'none';
 export type Severity = 'critical' | 'high' | 'normal';
@@ -13,7 +14,8 @@ export type Shape =
   | 'plain' | 'and' | 'or' | 'semicolon' | 'newline' | 'pipe' | 'subshell' | 'backticks' | 'bash-c' | 'sh-c'
   | 'eval' | 'ssh' | 'sudo' | 'env-prefix' | 'abs-path' | 'builtin-bypass' | 'xargs' | 'find' | 'heredoc'
   | 'refspec' | 'comment' | 'mention-echo' | 'mention-grep' | 'quote-split' | 'var-indirection' | 'base64-pipe'
-  | 'line-continuation' | 'background';
+  | 'line-continuation' | 'background' | 'flag-order' | 'flag-split' | 'long-flags' | 'home-var' | 'find-exec'
+  | 'cmd-subst' | 'function' | 'python-c' | 'node-e' | 'short-flag';
 export type PermissionMode = 'default' | 'plan' | 'acceptEdits' | 'auto' | 'dontAsk' | 'bypassPermissions';
 export type OnFailure = 'continue' | 'block';
 
