@@ -119,11 +119,19 @@ runs the hook with your real home. Default timeout 10 s (`--timeout`, in seconds
 plain text, unless one of them is an object that sets a known field: then the
 whole output is invalid.
 
-| stdout | exit 0 | exit 2 | other exit or signal |
-|---|---|---|---|
-| valid JSON | the fields decide | blocked; the fields cannot undo it, not even `allow` | the fields decide; with `--on-failure block` it is a failure and blocks |
-| invalid JSON (parse or schema error) | failure | blocked | failure |
-| plain text or nothing | no decision | blocked | failure |
+| stdout | exit 0 | exit 2 | other exit | killed by a signal |
+|---|---|---|---|---|
+| valid JSON | the fields decide | blocked; the fields cannot undo it, not even `allow` | the fields decide; with `--on-failure block` it is a failure and blocks | failure |
+| invalid JSON (parse or schema error) | failure | blocked | failure | failure |
+| plain text or nothing | no decision | blocked | failure | failure |
+
+A hook killed by a signal did not finish, so whatever it printed is not read as
+a decision; the docs do not cover this case, and this is the conservative
+reading. When stdout is plain text but one of its lines is a JSON object with
+`hookSpecificOutput` or `decision` (`checking...` followed by a deny, or a deny
+followed by `ok`), the result follows the contract (no decision) and carries the
+warning "decision JSON mixed with text; Claude Code ignores it". The text and
+Markdown reports count these under "Ignored decisions".
 
 A failure is what the docs call a non-blocking error: the hook cannot start,
 times out, exits with another code without valid JSON, or prints invalid

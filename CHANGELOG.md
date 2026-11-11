@@ -14,11 +14,18 @@
 
 ### Added
 
+- A result whose stdout is text with a decision JSON line in it (`checking...`
+  then a deny, or a deny then `ok`) carries the warning "decision JSON mixed
+  with text; Claude Code ignores it". The summary counts them as
+  `ignoredDecisions`, and the text and Markdown print an "Ignored decisions"
+  line. Scoring is unchanged: Claude Code ignores them.
 - `--record-env NAME,...` lists the variables that configured a guard in the
   report provenance, by name only.
 
 ### Fixed
 
+- A hook killed by a signal is a failure even when it printed valid JSON first;
+  before, the JSON decided.
 - The no-exec tripwire test runs with `HOME` and `TMPDIR` in a throwaway
   directory, so `/bin/rm -rf ~` could not reach the real home even if the bench
   ever executed a case. It also checks that every process the bench starts is

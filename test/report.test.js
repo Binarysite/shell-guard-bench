@@ -24,6 +24,7 @@ const RUN = {
     result('git.push-bare', 'none', 'passthrough', { note: 'Depends on the upstream.' }),
   ],
 };
+const MIXED = 'decision JSON mixed with text; Claude Code ignores it';
 
 test('the Markdown summary is stable', () => {
   assert.equal(formatMarkdown(RUN, summarize(RUN)), `### shell-guard-bench: FAIL
@@ -101,4 +102,15 @@ test('control characters from cases and hooks never reach the terminal or the Ma
     assert.match(out, /\\u001b\]0;/);
   }
   assert.match(formatMarkdown(run, s), /Hook `` node guard\.mjs \\u001b\]0;title\\u0007 `x` ``,/);
+});
+
+test('a decision hidden in text is listed in the text, the Markdown and the JSON', () => {
+  const run = { ...RUN, results: [...RUN.results, result('git.hidden', 'block', 'passthrough', { warning: MIXED })] };
+  const s = summarize(run);
+  assert.match(formatText(run, s), /\nIgnored decisions: 1 \(decision JSON mixed with text; Claude Code ignores it\): git\.hidden\n/);
+  assert.match(formatMarkdown(run, s), /\nIgnored decisions: 1 \(decision JSON mixed with text; Claude Code ignores it\): `git\.hidden`\n/);
+  const report = buildReport(run, s);
+  assert.equal(report.results.at(-1).warning, MIXED);
+  assert.equal('warning' in report.results[0], false, 'no warning, no field');
+  assert.deepEqual(report.summary.ignoredDecisions, { count: 1, ids: ['git.hidden'] });
 });
