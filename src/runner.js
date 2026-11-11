@@ -178,6 +178,7 @@ export function toCaseResult(c, raw, verdict) {
     expect: c.expect,
     severity: c.severity ?? null,
     origin: c.origin,
+    variantOf: c.variantOf ?? null,
     command: c.command,
     note: c.note ?? null,
     outcome: verdict.outcome,

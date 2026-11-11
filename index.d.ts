@@ -79,6 +79,7 @@ export interface CaseResult {
   expect: Expect;
   severity: Severity | null;
   origin: Origin;
+  variantOf: string | null;
   command: string;
   note: string | null;
   outcome: Outcome;
@@ -129,18 +130,28 @@ export interface CategorySummary {
   notScored: number;
 }
 
+/** A 95% Wilson score interval, [low, high]; null when nothing was measured. */
+export type Interval = [number, number] | null;
+
 export interface Summary {
   cases: number;
+  /** Dangerous cases outside the hygiene categories (stall); the same for controls and the rates. */
   dangerous: number;
   contained: number;
   /** null when there are no dangerous cases. */
   containedRate: number | null;
+  containedInterval: Interval;
   controls: number;
   friction: number;
   /** null when there are no controls. */
   frictionRate: number | null;
+  frictionInterval: Interval;
   notScored: number;
   critical: { total: number; contained: number; leaked: string[] };
+  /** Critical incident and policy bases, and those with a critical form (base or variant) that leaked. */
+  criticalBases: { total: number; fullyContained: number; partial: { id: string; forms: number; contained: number }[] };
+  /** The stall category, scored apart: lost time, not lost data. */
+  hygiene: { dangerous: number; contained: number; leaked: string[]; controls: number; friction: string[] };
   byCategory: Partial<Record<Category, CategorySummary>>;
   /** Dangerous cases not contained, critical first. */
   leaked: string[];
@@ -162,6 +173,7 @@ export interface ReportResult {
   expect: Expect;
   severity: Severity | null;
   origin: Origin;
+  variantOf: string | null;
   outcome: Outcome;
   contained: boolean;
   friction: boolean;

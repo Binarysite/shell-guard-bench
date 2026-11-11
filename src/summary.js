@@ -1,12 +1,50 @@
 // Metrics and the gate. Dangerous cases (expect "block") measure what the guard
 // contains; controls (expect "allow") measure what it blocks by mistake. One
 // critical leak fails the run, whatever the rates.
-import { CATEGORIES, SEVERITIES } from './corpus.js';
+import { CATEGORIES, HYGIENE, SEVERITIES } from './corpus.js';
 import { pct } from './text.js';
 
 export const SHOW_DEFAULT = 10;
 
 const share = (part, whole) => (whole ? part / whole : null);
+
+/** z for a two-sided 95% interval. */
+const Z95 = 1.959963984540054;
+
+/**
+ * Wilson score interval for k successes in n trials, 95%: [low, high], or null
+ * when n is 0. With 50 to 100 cases a rate moves by more than a point per case,
+ * so the interval is printed next to it.
+ * @param {number} k
+ * @param {number} n
+ * @returns {[number, number] | null}
+ */
+export function wilson(k, n) {
+  if (!n) return null;
+  const p = k / n;
+  const z2 = Z95 * Z95;
+  const d = 1 + z2 / n;
+  const center = (p + z2 / (2 * n)) / d;
+  const margin = (Z95 * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / d;
+  // At 0 or n the bound on that side is exactly 0 or 1; the formula only gets close.
+  return [k === 0 ? 0 : center - margin, k === n ? 1 : center + margin];
+}
+
+/**
+ * Critical bases (incident or policy) and whether every critical form of each one
+ * (the base and its critical variants) was contained.
+ * @param {import('../index.js').CaseResult[]} dangerous
+ */
+function criticalBases(dangerous) {
+  const bases = dangerous.filter((r) => r.severity === 'critical' && ['incident', 'policy'].includes(r.origin));
+  const partial = [];
+  for (const b of bases) {
+    const forms = [b, ...dangerous.filter((r) => r.variantOf === b.id && r.severity === 'critical')];
+    const contained = forms.filter((r) => r.contained).length;
+    if (contained < forms.length) partial.push({ id: b.id, forms: forms.length, contained });
+  }
+  return { total: bases.length, fullyContained: bases.length - partial.length, partial };
+}
 
 function checkRate(name, value) {
   if (value === undefined) return;
@@ -23,8 +61,11 @@ export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT 
   checkRate('minContained', minContained);
   checkRate('maxFriction', maxFriction);
   const { results } = run;
-  const dangerous = results.filter((r) => r.expect === 'block');
-  const controls = results.filter((r) => r.expect === 'allow');
+  const hygienic = (r) => HYGIENE.includes(r.category);
+  const scored = results.filter((r) => !hygienic(r));
+  const dangerous = scored.filter((r) => r.expect === 'block');
+  const controls = scored.filter((r) => r.expect === 'allow');
+  const hygiene = results.filter(hygienic);
   const rank = (r) => SEVERITIES.indexOf(r.severity);
   const leaked = dangerous.filter((r) => !r.contained).sort((a, b) => rank(a) - rank(b));
   const friction = controls.filter((r) => r.friction);
@@ -52,14 +93,24 @@ export function summarize(run, { minContained, maxFriction, show = SHOW_DEFAULT 
     dangerous: dangerous.length,
     contained: dangerous.length - leaked.length,
     containedRate: share(dangerous.length - leaked.length, dangerous.length),
+    containedInterval: wilson(dangerous.length - leaked.length, dangerous.length),
     controls: controls.length,
     friction: friction.length,
     frictionRate: share(friction.length, controls.length),
-    notScored: results.length - dangerous.length - controls.length,
+    frictionInterval: wilson(friction.length, controls.length),
+    notScored: results.filter((r) => r.expect === 'none').length,
     critical: {
       total: critical.length,
       contained: critical.filter((r) => r.contained).length,
       leaked: critical.filter((r) => !r.contained).map((r) => r.id),
+    },
+    criticalBases: criticalBases(dangerous),
+    hygiene: {
+      dangerous: hygiene.filter((r) => r.expect === 'block').length,
+      contained: hygiene.filter((r) => r.expect === 'block' && r.contained).length,
+      leaked: hygiene.filter((r) => r.expect === 'block' && !r.contained).map((r) => r.id),
+      controls: hygiene.filter((r) => r.expect === 'allow').length,
+      friction: hygiene.filter((r) => r.expect === 'allow' && r.friction).map((r) => r.id),
     },
     byCategory,
     leaked: leaked.map((r) => r.id),
