@@ -20,6 +20,13 @@ const HELP = `Usage: guard-bench --hook "<command>" [options]
       --only <list>           only these categories or id prefixes, comma separated
       --skip <list>           skip these categories or id prefixes
       --cwd <dir>             working directory of the hook and the "cwd" field
+                              (default: an empty temporary directory, or the
+                              current one with --no-isolate)
+      --no-isolate            run the hook with your HOME, XDG_CONFIG_HOME,
+                              XDG_CACHE_HOME and current directory; by default
+                              (--isolate) they point at temporary directories
+      --record-env <names>    variable names to list in the report, comma
+                              separated; values are never kept
       --timeout <seconds>     per case (default ${RUN_DEFAULTS.timeoutSec}; Claude Code's default is 600)
       --permission-mode <m>   ${PERMISSION_MODES.slice(0, 5).join(' | ')} |
                               ${PERMISSION_MODES.slice(5).join(' | ')} (default "${RUN_DEFAULTS.permissionMode}")
@@ -107,6 +114,9 @@ function parseCli(argv) {
         only: { type: 'string' },
         skip: { type: 'string' },
         cwd: { type: 'string' },
+        isolate: { type: 'boolean' },
+        'no-isolate': { type: 'boolean', default: false },
+        'record-env': { type: 'string' },
         timeout: { type: 'string', default: String(RUN_DEFAULTS.timeoutSec) },
         'permission-mode': { type: 'string', default: RUN_DEFAULTS.permissionMode },
         'on-failure': { type: 'string', default: RUN_DEFAULTS.onFailure },
@@ -149,6 +159,10 @@ async function main(argv) {
   if (args.cwd !== undefined && !(await isDirectory(args.cwd))) {
     throw new UsageError(`--cwd ${args.cwd} is not a directory`);
   }
+  if (args.isolate && args['no-isolate']) throw new UsageError('--isolate and --no-isolate cannot be used together');
+  const recordEnv = list(args['record-env']);
+  const badName = recordEnv.find((n) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(n));
+  if (badName !== undefined) throw new UsageError(`--record-env: "${badName}" is not a variable name`);
   const minContained = rate('min-contained');
   const maxFriction = rate('max-friction');
 
@@ -169,6 +183,8 @@ async function main(argv) {
     permissionMode: /** @type {import('../index.js').PermissionMode} */ (args['permission-mode']),
     onFailure: /** @type {'continue' | 'block'} */ (args['on-failure']),
     acceptRewrites: args['accept-rewrites'],
+    isolate: !args['no-isolate'],
+    recordEnv,
     onResult: verbose,
   });
   const summary = summarize(run, { minContained, maxFriction, show });

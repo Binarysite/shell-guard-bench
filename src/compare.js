@@ -9,6 +9,7 @@ const WATCHED = [
   ['contract date', (r) => r.contract?.checked],
   ['onFailure', (r) => r.provenance?.onFailure],
   ['permissionMode', (r) => r.provenance?.permissionMode],
+  ['isolate', (r) => r.provenance?.isolate],
 ];
 
 const SHOW_IDS = 5;

@@ -31,6 +31,8 @@ test('usage errors exit 2 with a message', async () => {
     [['--hook', 'exit 0', '--only', 'nothing-like-this'], /--only "nothing-like-this" matches no category/],
     [['--hook', 'exit 0', '--cwd', '/nonexistent-dir-for-the-bench'], /--cwd \/nonexistent-dir-for-the-bench is not a directory/],
     [['--hook', 'exit 0', '--cwd', 'package.json'], /--cwd package\.json is not a directory/],
+    [['--hook', 'exit 0', '--isolate', '--no-isolate'], /--isolate and --no-isolate cannot be used together/],
+    [['--hook', 'exit 0', '--record-env', 'OK,NOT-A-NAME'], /--record-env: "NOT-A-NAME" is not a variable name/],
   ];
   for (const [args, message] of cases) {
     await assert.rejects(cli(...args), (err) => err.code === 2 && message.test(err.stderr), args.join(' '));
@@ -59,6 +61,11 @@ test('a run reports overrides, honors the gate flags and exits 1 on a leak', asy
   await cli('--hook', 'exit 2', '--only', 'privilege', '--on-failure', 'block', '--permission-mode', 'auto', '--out', out);
   const { provenance } = JSON.parse(await readFile(out, 'utf8'));
   assert.deepEqual([provenance.onFailure, provenance.permissionMode, provenance.cases], ['block', 'auto', 4]);
+  assert.equal(provenance.isolate, true, 'isolation is the default');
+  await cli('--hook', 'exit 2', '--only', 'privilege', '--no-isolate', '--record-env', 'GUARD_LEVEL, GUARD_HOME',
+    '--out', out);
+  const again = JSON.parse(await readFile(out, 'utf8'));
+  assert.deepEqual([again.provenance.isolate, again.provenance.recordedEnv], [false, ['GUARD_LEVEL', 'GUARD_HOME']]);
 });
 
 test('an --out or --md that cannot be written is a usage error before the run', async (t) => {

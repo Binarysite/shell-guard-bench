@@ -55,7 +55,8 @@ test('no corpus command is ever executed', async (t) => {
   setEnv(t, { PATH: `${shims}:${process.env.PATH}`, HOME: home, TMPDIR: tmp });
 
   const { cases } = await loadCorpus();
-  const run = await runBench({ hook: nodeHook('record.mjs', record), cases, cwd: dir });
+  // isolate: false is the path where the hook inherits HOME; the default isolation would hide it.
+  const run = await runBench({ hook: nodeHook('record.mjs', record), cases, cwd: dir, isolate: false });
 
   assert.equal(existsSync(trip), false, existsSync(trip) ? await readFile(trip, 'utf8') : '');
   assert.ok(existsSync(sentinel), 'the fake home was touched');

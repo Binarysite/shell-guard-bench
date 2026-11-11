@@ -1,12 +1,10 @@
 // Test hook that does what a guard must never do: it carries out the command it
-// was asked to judge. To stay harmless it only understands the canary's
-// `touch '<file>'` and creates that file itself, with no shell. It logs every
+// was asked to judge (only the canary forms, see canary-only.mjs). It logs every
 // command it receives to argv[2].
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync } from 'node:fs';
+import { canaryOf, carryOut, readCommand } from './canary-only.mjs';
 
-let stdin = '';
-for await (const chunk of process.stdin) stdin += chunk;
-const { command } = JSON.parse(stdin).tool_input;
+const command = await readCommand();
 appendFileSync(process.argv[2], `${JSON.stringify(command)}\n`);
-const touch = /touch '([^']+canary-[ab])'$/.exec(command);
-if (touch) writeFileSync(touch[1], '');
+const canary = canaryOf(command);
+if (canary) carryOut(canary);

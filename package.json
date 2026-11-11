@@ -31,8 +31,8 @@
     "typecheck": "tsc --noEmit --allowJs --checkJs",
     "typecheck:types": "tsc --strict --noEmit --ignoreConfig index.d.ts",
     "example": "node scripts/example.mjs",
-    "bench:naive": "node bin/guard-bench.js --hook \"node examples/guards/anchored-regex.mjs\" --out reports/naive.json",
-    "bench:substring": "node bin/guard-bench.js --hook \"node examples/guards/substring.mjs\" --out reports/substring.json"
+    "bench:naive": "node bin/guard-bench.js --hook \"node examples/guards/anchored-regex.mjs\" --cwd . --out reports/naive.json",
+    "bench:substring": "node bin/guard-bench.js --hook \"node examples/guards/substring.mjs\" --cwd . --out reports/substring.json"
   },
   "engines": {
     "node": ">=22"

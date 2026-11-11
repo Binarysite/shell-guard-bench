@@ -4,16 +4,16 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { rmSync } from 'node:fs';
-import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { CANARY_GRACE_MS, canaryAfter, canaryBefore } from './canary.js';
+import { CANARY_GRACE_MS, canaryAfter, canaryBefore, canaryCases } from './canary.js';
 import { classifyHookResult } from './classify.js';
 import { validateCases } from './corpus.js';
 import { SetupError } from './errors.js';
 import { head } from './text.js';
 
-export const RUN_DEFAULTS = Object.freeze({ timeoutSec: 10, permissionMode: 'default', onFailure: 'continue' });
+export const RUN_DEFAULTS = Object.freeze({ timeoutSec: 10, permissionMode: 'default', onFailure: 'continue', isolate: true });
 export const PERMISSION_MODES = Object.freeze(['default', 'plan', 'acceptEdits', 'auto', 'dontAsk', 'bypassPermissions']);
 export const ON_FAILURE = Object.freeze(['continue', 'block']);
 /** Bytes kept per stream; stdout cut at this limit is read as plain text. A bench choice, not from the docs. */
@@ -42,15 +42,20 @@ export function hookInput(c, ctx) {
 
 /**
  * The hook's environment: inherited, minus the OTEL_* exporter variables Claude Code
- * strips, plus CLAUDE_PROJECT_DIR when it is not already set.
+ * strips, plus CLAUDE_PROJECT_DIR when it is not already set. `home` replaces HOME,
+ * XDG_CONFIG_HOME and XDG_CACHE_HOME (the --isolate layout).
  * @param {string} cwd
  * @param {NodeJS.ProcessEnv} [base]
+ * @param {{ home: string, config: string, cache: string }} [home]
  */
-export function hookEnv(cwd, base = process.env) {
+export function hookEnv(cwd, base = process.env, home = undefined) {
   const env = Object.fromEntries(Object.entries(base).filter(([k]) => !k.startsWith('OTEL_')));
   env.CLAUDE_PROJECT_DIR ??= cwd;
+  if (home) Object.assign(env, { HOME: home.home, XDG_CONFIG_HOME: home.config, XDG_CACHE_HOME: home.cache });
   return env;
 }
+
+const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /** @param {string} path */
 export const isDirectory = (path) => stat(path).then((s) => s.isDirectory(), () => false);
@@ -194,22 +199,31 @@ export function toCaseResult(c, raw, verdict) {
 
 /**
  * Runs every case through the hook, one at a time and in corpus order, after the
- * canary. Throws SetupError when the bench cannot be trusted to go on.
+ * canaries. Throws SetupError when the bench cannot be trusted to go on.
+ * With `isolate` (the default) the hook gets a fresh temporary HOME, XDG_CONFIG_HOME
+ * and XDG_CACHE_HOME, and a fresh working directory unless `cwd` is given.
+ * `recordEnv` names variables to list in the report; their values are never kept.
  * @param {{ hook: string, cases: import('../index.js').Case[], cwd?: string, timeoutSec?: number,
  *   permissionMode?: import('../index.js').PermissionMode, onFailure?: 'continue' | 'block',
- *   acceptRewrites?: boolean, canaryGraceMs?: number, spawnImpl?: typeof spawn,
- *   onResult?: (r: import('../index.js').CaseResult) => void }} opts
+ *   acceptRewrites?: boolean, isolate?: boolean, recordEnv?: string[], canaryGraceMs?: number,
+ *   spawnImpl?: typeof spawn, onResult?: (r: import('../index.js').CaseResult) => void }} opts
  * @returns {Promise<import('../index.js').BenchRun>}
  */
 export async function runBench(opts) {
   if (process.platform === 'win32') {
-    throw new SetupError('unsupported-platform', 'POSIX only in v0.1: hooks run with sh -c');
+    throw new SetupError('unsupported-platform', 'POSIX only: hooks run with sh -c');
   }
   if (typeof opts.hook !== 'string' || !opts.hook.trim()) throw new TypeError('hook must be a non-empty string');
   if (!opts.cases?.length) throw new SetupError('no-cases', 'no cases to run');
   validateCases(opts.cases, 'cases');
-  const cwd = resolve(opts.cwd ?? process.cwd());
-  if (!(await isDirectory(cwd))) throw new TypeError(`cwd ${cwd} is not a directory`);
+  const isolate = opts.isolate ?? RUN_DEFAULTS.isolate;
+  const recordedEnv = [...(opts.recordEnv ?? [])];
+  const badName = recordedEnv.find((n) => typeof n !== 'string' || !ENV_NAME.test(n));
+  if (badName !== undefined) throw new TypeError(`recordEnv: ${JSON.stringify(badName)} is not a variable name`);
+  const explicitCwd = opts.cwd === undefined ? undefined : resolve(opts.cwd);
+  if (explicitCwd !== undefined && !(await isDirectory(explicitCwd))) {
+    throw new TypeError(`cwd ${explicitCwd} is not a directory`);
+  }
   const timeoutSec = opts.timeoutSec ?? RUN_DEFAULTS.timeoutSec;
   if (!(timeoutSec > 0)) throw new RangeError('timeoutSec must be greater than 0');
   const permissionMode = opts.permissionMode ?? RUN_DEFAULTS.permissionMode;
@@ -241,28 +255,41 @@ export async function runBench(opts) {
   process.once('SIGINT', onSignal);
   process.once('SIGTERM', onSignal);
   try {
+    const home = isolate
+      ? { home: join(dir, 'home'), config: join(dir, 'home', '.config'), cache: join(dir, 'home', '.cache') }
+      : undefined;
+    if (home) for (const d of [home.config, home.cache]) await mkdir(d, { recursive: true });
+    const cwd = explicitCwd ?? (isolate ? join(dir, 'work') : resolve(process.cwd()));
+    if (explicitCwd === undefined && isolate) await mkdir(cwd);
     const transcriptPath = join(dir, 'transcript.jsonl');
     await writeFile(transcriptPath, '');
     const ctx = { sessionId: randomUUID(), transcriptPath, cwd, permissionMode };
-    const env = hookEnv(cwd);
-    const judge = async (c, toolUseId) => {
-      const input = hookInput(c, { ...ctx, toolUseId });
+    const env = hookEnv(cwd, process.env, home);
+    // Canaries and cases share one counter, so the id does not tell them apart.
+    let calls = 0;
+    const judge = async (c) => {
+      const input = hookInput(c, { ...ctx, toolUseId: `toolu_bench_${++calls}` });
       const raw = await runHook({ hook: opts.hook, input, cwd, timeoutSec, env, spawnImpl: opts.spawnImpl });
       return { raw, verdict: classifyHookResult(raw, { command: c.command, onFailure, acceptRewrites }) };
     };
 
-    await canaryBefore(dir, async (c) => (await judge(c, `toolu_bench_${c.id.replace('-', '_')}`)).verdict, graceMs);
+    const canaries = canaryCases(dir);
+    const hint = isolate
+      ? ' HOME points at a temporary directory (--isolate): write a hook path with ~ or $HOME as an absolute '
+        + 'path, or use --no-isolate for a guard that needs your real home or repository.'
+      : '';
+    await canaryBefore(canaries, async (c) => (await judge(c)).verdict, { graceMs, hint });
 
     const results = [];
-    for (const [i, c] of opts.cases.entries()) {
-      const { raw, verdict } = await judge(c, `toolu_bench_${i + 1}`);
+    for (const c of opts.cases) {
+      const { raw, verdict } = await judge(c);
       const result = toCaseResult(c, raw, verdict);
       results.push(result);
       opts.onResult?.(result);
     }
     return {
-      hook: opts.hook, cwd, timeoutSec, permissionMode, onFailure, acceptRewrites, startedAt,
-      cases: opts.cases, results, invalid: await canaryAfter(dir, graceMs),
+      hook: opts.hook, cwd, timeoutSec, permissionMode, onFailure, acceptRewrites, isolate, recordedEnv, startedAt,
+      cases: opts.cases, results, invalid: await canaryAfter(canaries, graceMs),
     };
   } finally {
     stopListening();
