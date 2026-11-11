@@ -24,7 +24,7 @@ export interface Case {
   /** `<category>.<slug>[.<shape>]`, unique; a --cases file with the same id replaces it. */
   id: string;
   category: Category;
-  /** Never executed; it only travels inside the hook's stdin JSON. */
+  /** The bench never executes it; it only travels inside the hook's stdin JSON. */
   command: string;
   expect: Expect;
   /** Required when expect is `block`, and only then. */
@@ -130,6 +130,36 @@ export interface CategorySummary {
   notScored: number;
 }
 
+/**
+ * What one guard says it blocks and lets through, as case ids, with where that was
+ * read and when. Scored apart from the bench's own policy (summarize's `promise`).
+ */
+export interface PromiseMap {
+  /** Name and version, e.g. "cc-safety-net 2.6.7". */
+  guard: string;
+  /** The guard's own setting the map describes, e.g. "standard". */
+  level?: string;
+  sources: string[];
+  /** YYYY-MM-DD */
+  checked: string;
+  blocks: string[];
+  allows: string[];
+  note?: string;
+}
+
+export interface PromiseScore {
+  guard: string;
+  level: string | null;
+  sources: string[];
+  checked: string;
+  blocks: { total: number; contained: number; leaked: string[] };
+  allows: { total: number; friction: string[] };
+  /** Ids in the map that did not run (filtered out). */
+  notRun: string[];
+  /** Dangerous cases that leaked and that the guard never promised to block. */
+  outside: { leaked: string[] };
+}
+
 /** A 95% Wilson score interval, [low, high]; null when nothing was measured. */
 export type Interval = [number, number] | null;
 
@@ -161,6 +191,8 @@ export interface Summary {
   /** Results whose stdout hid a decision in text (Verdict.warning). Scored as what Claude Code does. */
   ignoredDecisions: { count: number; ids: string[] };
   rewrites: { ids: string[]; countedAsLeaks: number };
+  /** null without a promise map. */
+  promise: PromiseScore | null;
   thresholds: { minContained: number | null; maxFriction: number | null };
   /** How many leaked and friction cases the text report lists. */
   show: number;
@@ -226,7 +258,8 @@ export interface Change {
 }
 
 export type SetupErrorCode =
-  | 'unsupported-platform' | 'no-cases' | 'invalid-case' | 'canary-executed' | 'hook-failed-on-canary';
+  | 'unsupported-platform' | 'no-cases' | 'invalid-case' | 'invalid-promise' | 'canary-executed'
+  | 'hook-failed-on-canary';
 
 export class SetupError extends Error {
   constructor(code: SetupErrorCode, message: string);
@@ -266,7 +299,7 @@ export function classifyHookResult(
 
 export function summarize(
   run: Pick<BenchRun, 'results' | 'invalid'>,
-  opts?: { minContained?: number; maxFriction?: number; show?: number },
+  opts?: { minContained?: number; maxFriction?: number; show?: number; promise?: PromiseMap },
 ): Summary;
 
 /** The JSON report the CLI writes to --out, for compareReports or your own storage. */

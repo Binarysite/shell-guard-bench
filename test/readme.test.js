@@ -59,14 +59,39 @@ test('every corpus count written in the docs is the real one', async () => {
   assert.deepEqual(table, expected.map((l) => l.trim()));
 });
 
-test('the Measured guards table is the committed cc-safety-net report', async () => {
+test('the Measured guards tables are the committed cc-safety-net reports and promise maps', async () => {
   const readme = await readFile(join(root, 'README.md'), 'utf8');
-  const report = JSON.parse(await readFile(join(root, 'reports/cc-safety-net-2.6.7-2026-10-10.json'), 'utf8'));
-  assert.equal(report.provenance.hook, 'npx -y cc-safety-net@2.6.7 hook --coding-cli');
-  const section = readme.slice(readme.indexOf('## Measured guards'), readme.indexOf('## How it works'));
-  for (const [cat, c] of Object.entries(report.summary.byCategory)) {
-    assert.match(section, new RegExp(`\\| ${cat} \\|[^|]*\\| ${c.dangerous} \\| ${c.contained} \\| ${c.leaked} \\| ${c.controls} \\| ${c.friction} \\|`));
+  const json = async (file) => JSON.parse(await readFile(join(root, file), 'utf8'));
+  const levels = ['standard', 'strict'];
+  const reports = await Promise.all(levels.map((l) => json(`reports/cc-safety-net-2.6.7-2026-11-11-${l}.json`)));
+  const maps = await Promise.all(levels.map((l) => json(`promises/cc-safety-net-2.6.7-${l}.json`)));
+  for (const r of reports) {
+    assert.equal(r.provenance.hook, 'npx -y cc-safety-net@2.6.7 hook --coding-cli');
+    assert.equal(r.provenance.isolate, true);
   }
-  const s = report.summary;
-  assert.match(section, new RegExp(`\\| total \\|[^|]*\\| ${s.dangerous} \\| ${s.contained} \\| ${s.dangerous - s.contained} \\| ${s.controls} \\| ${s.friction} \\|`));
+  assert.ok(reports[1].provenance.recordedEnv.includes('CC_SAFETY_NET_LEVEL'));
+  assert.ok(!reports[0].provenance.recordedEnv.includes('CC_SAFETY_NET_LEVEL'), 'standard is the default level');
+  const section = readme.slice(readme.indexOf('## Measured guards'), readme.indexOf('## How it works'));
+
+  for (const [i, label] of ['standard (default)', 'strict'].entries()) {
+    const { summary: s } = reports[i];
+    const p = s.promise;
+    assert.equal(p.guard, maps[i].guard);
+    assert.deepEqual([p.blocks.total, p.allows.total], [maps[i].blocks.length, maps[i].allows.length], 'every id ran');
+    const row = `| ${label} | ${p.blocks.contained} of ${p.blocks.total} | ${p.allows.friction.length} of ${p.allows.total} `
+      + `| ${s.contained} of ${s.dangerous} | ${s.friction} of ${s.controls} `
+      + `| ${s.criticalBases.fullyContained} of ${s.criticalBases.total} |`;
+    assert.ok(section.includes(row), `README lacks: ${row}`);
+  }
+
+  const [std, strict] = reports;
+  const expectOf = new Map(std.results.map((r) => [r.id, r.expect]));
+  const catOf = new Map(std.results.map((r) => [r.id, r.category]));
+  for (const [cat, c] of Object.entries(std.summary.byCategory)) {
+    const t = strict.summary.byCategory[cat];
+    const promised = maps[0].blocks.filter((id) => catOf.get(id) === cat && expectOf.get(id) === 'block').length;
+    const row = `| ${cat} | ${c.dangerous} | ${promised} | ${c.contained} | ${t.contained} | ${c.controls} | ${c.friction} `
+      + `| ${t.friction} |`;
+    assert.ok(section.includes(row), `README lacks: ${row}`);
+  }
 });

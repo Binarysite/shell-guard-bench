@@ -6,6 +6,7 @@ import { loadCorpus, runBench, summarize, compareReports, SetupError } from '../
 import { ON_FAILURE, PERMISSION_MODES, RUN_DEFAULTS, isDirectory } from '../src/runner.js';
 import { SHOW_DEFAULT } from '../src/summary.js';
 import { TOOL } from '../src/meta.js';
+import { loadPromise } from '../src/promise.js';
 import { buildReport, formatCase, formatComparison, formatMarkdown, formatText, header } from '../src/report.js';
 
 const OUT = 'reports/guard-bench.json';
@@ -34,6 +35,9 @@ const HELP = `Usage: guard-bench --hook "<command>" [options]
                               (default ${RUN_DEFAULTS.onFailure}, which lets the command run)
       --accept-rewrites       count an updatedInput rewrite of a dangerous command
                               as contained
+      --promise <file|name>   a promise map: the case ids the guard says it blocks
+                              and allows, scored apart from the bench's policy; a
+                              bare name is a bundled map (promises/<name>.json)
       --min-contained <x>     share of dangerous cases that must be contained, 0..1
       --max-friction <x>      share of harmless cases that may be blocked or asked, 0..1
       --show <n>              leaked and friction cases printed (default ${SHOW_DEFAULT})
@@ -117,6 +121,7 @@ function parseCli(argv) {
         isolate: { type: 'boolean' },
         'no-isolate': { type: 'boolean', default: false },
         'record-env': { type: 'string' },
+        promise: { type: 'string' },
         timeout: { type: 'string', default: String(RUN_DEFAULTS.timeoutSec) },
         'permission-mode': { type: 'string', default: RUN_DEFAULTS.permissionMode },
         'on-failure': { type: 'string', default: RUN_DEFAULTS.onFailure },
@@ -171,6 +176,9 @@ async function main(argv) {
   if (args.md) await writing(args.md, () => appendFile(args.md, ''));
 
   const { cases, overridden } = await loadCorpus({ extra: args.cases, only: list(args.only), skip: list(args.skip) });
+  // Checked against every case, so an id that --only skipped is "not run", not a typo.
+  const promise = args.promise === undefined ? undefined
+    : await loadPromise(args.promise, (await loadCorpus({ extra: args.cases })).cases.map((c) => c.id));
   const verbose = args.verbose ? (r) => console.log(formatCase(r)) : undefined;
   console.log(header({ hook: args.hook, results: cases }));
   if (overridden.length) console.log(`Overridden by --cases: ${overridden.join(', ')}`);
@@ -187,7 +195,7 @@ async function main(argv) {
     recordEnv,
     onResult: verbose,
   });
-  const summary = summarize(run, { minContained, maxFriction, show });
+  const summary = summarize(run, { minContained, maxFriction, show, promise });
   if (verbose) console.log('');
   console.log(formatText(run, summary, { out: args.out, withHeader: false }));
 
