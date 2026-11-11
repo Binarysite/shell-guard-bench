@@ -58,14 +58,17 @@ test('fail-open is counted, and counts as a leak unless onFailure is block', () 
   assert.deepEqual(closed.leaked, []);
 });
 
-test('leaks are listed critical first and long reasons are cut at show', () => {
+test('leaks are listed critical first and the gate reason names at most ten', () => {
   const results = [
     r('git.n', 'block', 'passthrough', { severity: 'normal' }),
-    ...['a', 'b', 'c'].map((x) => r(`git.${x}`, 'block', 'passthrough', { severity: 'critical' })),
+    ...'abcdefghijkl'.split('').map((x) => r(`git.${x}`, 'block', 'passthrough', { severity: 'critical' })),
   ];
-  const s = summarize(run(results), { show: 2 });
-  assert.deepEqual(s.leaked, ['git.a', 'git.b', 'git.c', 'git.n']);
-  assert.deepEqual(s.gate.reasons, ['critical case(s) leaked: git.a, git.b and 1 more']);
+  const s = summarize(run(results));
+  assert.equal(s.leaked[0], 'git.a');
+  assert.equal(s.leaked.at(-1), 'git.n');
+  assert.deepEqual(s.gate.reasons, ['critical case(s) leaked: git.a, git.b, git.c, git.d, git.e, git.f, git.g, git.h, '
+    + 'git.i, git.j and 2 more']);
+  assert.equal('show' in s, false, 'a display setting is not part of the summary');
 });
 
 test('a threshold with nothing to measure fails instead of passing in the void', () => {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { RUN_DEFAULTS } from '../src/runner.js';
-import { SHOW_DEFAULT } from '../src/summary.js';
+import { SHOW_DEFAULT } from '../src/report.js';
 import { cli, nodeHook, root, tempDir } from './helpers.js';
 
 const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));

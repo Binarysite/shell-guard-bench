@@ -2,7 +2,7 @@
 // an error with a file name and an id, not a silently different bench.
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { SetupError } from './errors.js';
+import { SetupError, fileProblem } from './errors.js';
 
 export const CATEGORIES = Object.freeze([
   'delete', 'kill', 'sync', 'git', 'deploy', 'database', 'privilege', 'cloud', 'secrets', 'stall',
@@ -30,6 +30,7 @@ const FIELDS = new Set([
 const ID = /^([a-z]+)\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.([a-z0-9]+(?:-[a-z0-9]+)*))?$/;
 const CORPUS_DIR = new URL('../corpus/', import.meta.url);
 
+/** @param {readonly unknown[]} list @param {unknown} value */
 const oneOf = (list, value) => list.includes(value);
 
 /**
@@ -77,6 +78,7 @@ function caseProblems(c) {
 export function validateCases(list, source) {
   if (!Array.isArray(list)) throw new SetupError('invalid-case', `${source}: must be a JSON array of cases`);
   const seen = new Set();
+  /** @type {string[]} */
   const errors = [];
   for (const [i, c] of list.entries()) {
     const label = typeof c?.id === 'string' ? c.id : `case #${i + 1}`;
@@ -98,7 +100,7 @@ export function crossCheck(cases, { coverage = false } = {}) {
   const byId = new Map(cases.map((c) => [c.id, c]));
   const errors = [];
   for (const c of cases.filter((x) => x.origin === 'variant')) {
-    const base = byId.get(c.variantOf);
+    const base = byId.get(/** @type {string} */ (c.variantOf));
     if (!base) errors.push(`${c.id}: variantOf "${c.variantOf}" does not exist`);
     else if (base.category !== c.category || base.expect !== c.expect) {
       errors.push(`${c.id}: variantOf "${c.variantOf}" must have the same category and expect; replace both ids together`);
@@ -114,18 +116,19 @@ export function crossCheck(cases, { coverage = false } = {}) {
   if (errors.length) throw new SetupError('invalid-case', errors.join('\n'));
 }
 
+/** @param {string | URL} file @param {string} label */
 async function readCases(file, label) {
   let text;
   try {
     text = await readFile(file, 'utf8');
   } catch (err) {
-    throw new SetupError('invalid-case', `${label}: ${err.code === 'ENOENT' ? 'file not found' : err.message}`);
+    throw new SetupError('invalid-case', `${label}: ${fileProblem(err)}`);
   }
   try {
     return validateCases(JSON.parse(text), label);
   } catch (err) {
     if (err instanceof SetupError) throw err;
-    throw new SetupError('invalid-case', `${label}: invalid JSON: ${err.message}`);
+    throw new SetupError('invalid-case', `${label}: invalid JSON: ${/** @type {Error} */ (err).message}`);
   }
 }
 
@@ -139,6 +142,7 @@ export function matches(entry, c) {
   return entry === c.category || entry === c.id || c.id.startsWith(`${entry}.`);
 }
 
+/** @param {{ id: string, category: string }[]} cases @param {string[]} entries @param {string} flag */
 function applyFilter(cases, entries, flag) {
   const unknown = entries.filter((e) => !cases.some((c) => matches(e, c)));
   if (unknown.length) {
@@ -184,7 +188,11 @@ export async function loadCorpus({ extra = [], only = [], skip = [] } = {}) {
   return { cases: chosen, overridden };
 }
 
-/** JSON with sorted keys, so the hash does not depend on key order in a file. */
+/**
+ * JSON with sorted keys, so the hash does not depend on key order in a file.
+ * @param {any} value
+ * @returns {string}
+ */
 function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -193,7 +201,11 @@ function canonical(value) {
   return JSON.stringify(value);
 }
 
-/** sha256 of the canonical JSON of the chosen cases, in run order. */
+/**
+ * sha256 of the canonical JSON of the chosen cases, in run order.
+ * @param {unknown[]} cases
+ * @returns {string}
+ */
 export function corpusHash(cases) {
   return createHash('sha256').update(canonical(cases)).digest('hex');
 }

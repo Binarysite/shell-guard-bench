@@ -11,16 +11,17 @@ import { root, tempDir } from './helpers.js';
 
 test('the README example blocks match the real output of npm run example', async () => {
   const readme = await readFile(join(root, 'README.md'), 'utf8');
-  const blocks = [...readme.matchAll(/<!-- example(?:-2)?:start -->\n```text\n([\s\S]*?)```\n<!-- example(?:-2)?:end -->/g)]
-    .map((m) => m[1]);
-  assert.equal(blocks.length, 2, 'README has the example and example-2 blocks');
+  const block = /<!-- example:start -->\n```text\n([\s\S]*?)```\n<!-- example:end -->/.exec(readme);
+  assert.ok(block, 'README has the example block');
   const { stdout } = await promisify(execFile)(process.execPath, ['scripts/example.mjs'], { cwd: root });
-  assert.equal(blocks.join('\n'), stdout);
+  // The README shows the first of the two runs; the second is summed up in prose, pinned by example.test.js.
+  assert.equal(block[1], stdout.slice(0, stdout.indexOf('\n$ guard-bench', 1)));
+  assert.match(readme, /contains all 84 critical cases and blocks 7 of\nthe 58 harmless commands/);
 });
 
-test('the cases file in "Add your own cases" loads against the real corpus', async (t) => {
-  const readme = await readFile(join(root, 'README.md'), 'utf8');
-  const section = readme.slice(readme.indexOf('## Add your own cases'));
+test('the cases file in CONTRIBUTING loads against the real corpus', async (t) => {
+  const readme = await readFile(join(root, 'CONTRIBUTING.md'), 'utf8');
+  const section = readme.slice(readme.indexOf('## A new case'));
   const json = /```json\n([\s\S]*?)```/.exec(section);
   assert.ok(json, 'the section has a JSON block');
   const file = join(await tempDir(t), 'cases.json');

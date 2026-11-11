@@ -58,12 +58,15 @@ export function hookEnv(cwd, base = process.env, home = undefined) {
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /** @param {string} path */
-export const isDirectory = (path) => stat(path).then((s) => s.isDirectory(), () => false);
+const isDirectory = (path) => stat(path).then((s) => s.isDirectory(), () => false);
 
 /** Process groups of the hooks running right now, for the signal handler of runBench. */
 const running = new Set();
 
-/** Kills the hook's whole process group; it may already be gone. */
+/**
+ * Kills the hook's whole process group; it may already be gone.
+ * @param {number} pid
+ */
 function killGroup(pid) {
   try {
     process.kill(-pid, 'SIGKILL');
@@ -71,6 +74,12 @@ function killGroup(pid) {
     // ESRCH: nothing left to kill.
   }
 }
+
+/**
+ * @typedef {{ exitCode: number | null, signal: string | null, timedOut: boolean, overflow: boolean,
+ *   unreapable: boolean, spawnError: Error | undefined, stdout: string, stderr: string,
+ *   durationMs: number }} RawRun
+ */
 
 /**
  * Runs `hook` with `/bin/sh -c` in its own process group and feeds it `input`.
@@ -81,6 +90,7 @@ function killGroup(pid) {
  * `spawnImpl` exists for the tests that check every process the bench starts.
  * @param {{ hook: string, input: object, cwd: string, timeoutSec?: number, env?: NodeJS.ProcessEnv,
  *   spawnImpl?: typeof spawn }} opts
+ * @returns {Promise<RawRun>}
  */
 export function runHook({
   hook, input, cwd, timeoutSec = RUN_DEFAULTS.timeoutSec, env = hookEnv(cwd), spawnImpl = spawn,
@@ -88,15 +98,20 @@ export function runHook({
   const started = Date.now();
   return new Promise((resolve) => {
     /** Raw bytes per stream, decoded once at the end so a cut never splits the count. */
+    /** @type {{ stdout: Buffer[], stderr: Buffer[] }} */
     const chunks = { stdout: [], stderr: [] };
     const bytes = { stdout: 0, stderr: 0 };
+    /** @type {RawRun} */
     const raw = {
       exitCode: null, signal: null, timedOut: false, overflow: false, unreapable: false,
       spawnError: undefined, stdout: '', stderr: '', durationMs: 0,
     };
     let settled = false;
+    /** @type {import('node:child_process').ChildProcessWithoutNullStreams} */
     let child;
+    /** @type {NodeJS.Timeout | undefined} */
     let timer;
+    /** @type {NodeJS.Timeout | undefined} */
     let reapTimer;
     const finish = () => {
       if (settled) return;
@@ -116,14 +131,14 @@ export function runHook({
     try {
       child = spawnImpl('/bin/sh', ['-c', hook], { cwd, env, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     } catch (err) {
-      raw.spawnError = err;
+      raw.spawnError = /** @type {Error} */ (err);
       finish();
       return;
     }
     if (child.pid) running.add(child.pid);
 
     const giveUp = () => {
-      killGroup(child.pid);
+      killGroup(/** @type {number} */ (child.pid));
       reapTimer = setTimeout(() => {
         raw.unreapable = true;
         child.stdout.destroy();
@@ -244,6 +259,7 @@ export async function runBench(opts) {
   // The hook runs in its own process group, so Ctrl+C on the terminal does not reach
   // it. On SIGINT or SIGTERM, kill it, remove the temporary directory, and let the
   // signal do what it would have done (unless someone else is listening for it).
+  /** @param {NodeJS.Signals} signal */
   const onSignal = (signal) => {
     for (const pid of running) killGroup(pid);
     rmSync(dir, { recursive: true, force: true });
@@ -269,6 +285,7 @@ export async function runBench(opts) {
     const env = hookEnv(cwd, process.env, home);
     // Canaries and cases share one counter, so the id does not tell them apart.
     let calls = 0;
+    /** @param {{ command: string, background?: boolean }} c */
     const judge = async (c) => {
       const input = hookInput(c, { ...ctx, toolUseId: `toolu_bench_${++calls}` });
       const raw = await runHook({ hook: opts.hook, input, cwd, timeoutSec, env, spawnImpl: opts.spawnImpl });
@@ -282,6 +299,7 @@ export async function runBench(opts) {
       : '';
     await canaryBefore(canaries, async (c) => (await judge(c)).verdict, { graceMs, hint });
 
+    /** @type {import('../index.js').CaseResult[]} */
     const results = [];
     for (const c of opts.cases) {
       const { raw, verdict } = await judge(c);

@@ -194,8 +194,6 @@ export interface Summary {
   /** null without a promise map. */
   promise: PromiseScore | null;
   thresholds: { minContained: number | null; maxFriction: number | null };
-  /** How many leaked and friction cases the text report lists. */
-  show: number;
   gate: { pass: boolean; reasons: string[] };
 }
 
@@ -299,7 +297,7 @@ export function classifyHookResult(
 
 export function summarize(
   run: Pick<BenchRun, 'results' | 'invalid'>,
-  opts?: { minContained?: number; maxFriction?: number; show?: number; promise?: PromiseMap },
+  opts?: { minContained?: number; maxFriction?: number; promise?: PromiseMap },
 ): Summary;
 
 /** The JSON report the CLI writes to --out, for compareReports or your own storage. */

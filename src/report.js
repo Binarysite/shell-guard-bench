@@ -5,9 +5,14 @@ import { HYGIENE, corpusHash } from './corpus.js';
 import { SCHEMA_VERSION, TOOL } from './meta.js';
 import { pct, printable } from './text.js';
 
-export const DEMO_LINE = 'One leaks, one cries wolf. Yours is somewhere in between; now you can see where.';
+/** How many leaked and friction cases the text report lists by default (--show). */
+export const SHOW_DEFAULT = 10;
 
-/** The first line of a command or reason for one line of the report, with how many lines were cut. */
+/**
+ * The first line of a command or reason for one line of the report, with how many lines were cut.
+ * @param {unknown} text
+ * @param {number} [max]
+ */
 const preview = (text, max = 70) => {
   const lines = String(text).split('\n');
   const line = printable(lines[0]);
@@ -15,7 +20,10 @@ const preview = (text, max = 70) => {
   return lines.length > 1 ? `${cut} [+${lines.length - 1} lines]` : cut;
 };
 
-/** A Markdown code span that holds any text, backticks included. */
+/**
+ * A Markdown code span that holds any text, backticks included.
+ * @param {unknown} text
+ */
 const code = (text) => {
   const t = printable(text);
   const longest = Math.max(0, ...(t.match(/`+/g) ?? []).map((m) => m.length));
@@ -23,7 +31,10 @@ const code = (text) => {
   return longest ? `${fence} ${t} ${fence}` : `${fence}${t}${fence}`;
 };
 
-/** Left-aligned columns, two spaces apart. */
+/**
+ * Left-aligned columns, two spaces apart.
+ * @param {(string | number)[][]} rows
+ */
 function table(rows) {
   const widths = rows[0].map((_, i) => Math.max(...rows.map((r) => String(r[i]).length)));
   return rows.map((r) => r.map((cell, i) => String(cell).padEnd(widths[i])).join('  ').trimEnd()).join('\n');
@@ -31,8 +42,12 @@ function table(rows) {
 
 const TABLE_HEAD = ['category', 'dangerous', 'contained', 'leaked', 'controls', 'friction', 'not scored'];
 
-/** Category rows, the total of the scored ones, then the hygiene rows, which the total leaves out. */
+/**
+ * Category rows, the total of the scored ones, then the hygiene rows, which the total leaves out.
+ * @param {import('../index.js').Summary} summary
+ */
 function categoryRows(summary) {
+  /** @param {[string, import('../index.js').CategorySummary]} entry */
   const row = ([name, c]) => [name, c.dangerous, c.contained, c.leaked, c.controls, c.friction, c.notScored];
   const entries = Object.entries(summary.byCategory);
   const rows = entries.filter(([name]) => !HYGIENE.includes(name)).map(row);
@@ -46,15 +61,23 @@ function categoryRows(summary) {
   return rows;
 }
 
-/** "49 of 69 (71.0%, 95% CI 59.4% to 80.4%)" */
+/**
+ * "49 of 69 (71.0%, 95% CI 59.4% to 80.4%)"
+ * @param {number} part
+ * @param {number} whole
+ * @param {number | null} value
+ * @param {import('../index.js').Interval} interval
+ */
 const rate = (part, whole, value, interval) => `${part} of ${whole} (${pct(value)}`
   + `${interval ? `, 95% CI ${pct(interval[0])} to ${pct(interval[1])}` : ''})`;
 
+/** @param {import('../index.js').Summary} summary */
 function rateLine(summary) {
   return `Contained ${rate(summary.contained, summary.dangerous, summary.containedRate, summary.containedInterval)}`
     + `; friction ${rate(summary.friction, summary.controls, summary.frictionRate, summary.frictionInterval)}`;
 }
 
+/** @param {import('../index.js').Summary} summary @param {number} show */
 function basesLine(summary, show) {
   const b = summary.criticalBases;
   const partial = b.partial.slice(0, show).map((p) => `${p.id} ${p.contained}/${p.forms}`);
@@ -63,6 +86,7 @@ function basesLine(summary, show) {
     + `${partial.length ? `  partial: ${partial.join(', ')}${more}` : ''}`;
 }
 
+/** @param {import('../index.js').Summary} summary */
 function hygieneLine(summary) {
   const h = summary.hygiene;
   if (!h.dangerous && !h.controls) return null;
@@ -76,25 +100,34 @@ export function header(run) {
     + `  contract: Claude Code hooks (checked ${CONTRACT.checked})`;
 }
 
-/** One line per case, for --verbose. */
+/**
+ * One line per case, for --verbose.
+ * @param {import('../index.js').CaseResult} r
+ */
 export function formatCase(r) {
   const sev = r.severity ? `[${r.severity}] ` : '';
   return `${r.outcome.padEnd(11)} ${r.expect.padEnd(5)}  ${sev}${r.id}  ${preview(r.command)}`;
 }
 
+/** @param {import('../index.js').Summary} summary */
 function failOpenLine(summary) {
   const f = summary.failOpen;
   if (!f.count) return null;
   return `Fail-open: ${f.count} case(s) failed (${f.kinds.join(', ')}); with "onFailure": "block" they would be blocked.`;
 }
 
+/** @param {import('../index.js').Summary} summary @param {(ids: string[]) => string} ids */
 function ignoredLine(summary, ids) {
   const d = summary.ignoredDecisions;
   if (!d?.count) return null;
   return `Ignored decisions: ${d.count} (${MIXED_WARNING}): ${ids(d.ids)}`;
 }
 
-/** The promise score, as lines of text; empty without a promise map. */
+/**
+ * The promise score, as lines of text; empty without a promise map.
+ * @param {import('../index.js').Summary} summary
+ * @param {(ids: string[]) => string} list
+ */
 function promiseLines(summary, list) {
   const p = summary.promise;
   if (!p) return [];
@@ -108,6 +141,7 @@ function promiseLines(summary, list) {
   return lines;
 }
 
+/** @param {import('../index.js').BenchRun} run @param {import('../index.js').Summary} summary */
 function rewritesLine(run, summary) {
   const n = summary.rewrites.ids.length;
   if (!n) return null;
@@ -119,40 +153,42 @@ function rewritesLine(run, summary) {
  * The text report printed after a run.
  * @param {import('../index.js').BenchRun} run
  * @param {import('../index.js').Summary} summary
- * @param {{ out?: string, withHeader?: boolean }} [opts] `out` is named when a list is cut
+ * @param {{ out?: string, withHeader?: boolean, show?: number }} [opts] `out` is named when a list is
+ *   cut; `show` is how many leaked and friction cases are listed
  */
-export function formatText(run, summary, { out = 'the JSON report', withHeader = true } = {}) {
+export function formatText(run, summary, { out = 'the JSON report', withHeader = true, show = SHOW_DEFAULT } = {}) {
   const byId = new Map(run.results.map((r) => [r.id, r]));
   const lines = [...(withHeader ? [header(run), ''] : []), table([TABLE_HEAD, ...categoryRows(summary)]), ''];
   const c = summary.critical;
   lines.push(rateLine(summary));
   lines.push(`Critical ${c.total}  contained ${c.contained}  leaked ${c.leaked.length}`);
-  lines.push(basesLine(summary, summary.show));
+  lines.push(basesLine(summary, show));
   const hygiene = hygieneLine(summary);
   if (hygiene) lines.push(hygiene);
 
+  /** @param {string[]} ids @param {(r: import('../index.js').CaseResult) => string} render */
   const list = (ids, render) => {
-    for (const id of ids.slice(0, summary.show)) lines.push(render(byId.get(id)));
-    if (ids.length > summary.show) lines.push(`  and ${ids.length - summary.show} more in ${out}`);
+    for (const id of ids.slice(0, show)) lines.push(render(/** @type {import('../index.js').CaseResult} */ (byId.get(id))));
+    if (ids.length > show) lines.push(`  and ${ids.length - show} more in ${out}`);
   };
   list(summary.leaked, (r) => `LEAKED      [${r.severity}] ${r.id}  ${preview(r.command)}  (${r.outcome})`);
   list(summary.frictionIds, (r) => `FRICTION    ${r.id}  ${preview(r.command)}  (${r.outcome}`
     + `${r.reason ? `: ${preview(r.reason, 80)}` : ''})`);
   for (const id of summary.notScoredIds) {
-    const r = byId.get(id);
+    const r = /** @type {import('../index.js').CaseResult} */ (byId.get(id));
     lines.push(`NOT SCORED  ${r.id}  ${r.outcome}  ${printable(r.note ?? '')}`.trimEnd());
   }
   const failOpen = failOpenLine(summary);
   if (failOpen) {
     // The reason of the first failure, so a schema error does not need the JSON file to be found.
-    const first = byId.get(summary.failOpen.ids[0]);
+    const first = /** @type {import('../index.js').CaseResult} */ (byId.get(summary.failOpen.ids[0]));
     lines.push(failOpen, `  first: ${first.id}: ${preview(first.reason ?? first.failure, 100)}`);
   }
-  const ignored = ignoredLine(summary, (ids) => ids.slice(0, summary.show).join(', ')
-    + (ids.length > summary.show ? ` and ${ids.length - summary.show} more` : ''));
+  const ignored = ignoredLine(summary, (ids) => ids.slice(0, show).join(', ')
+    + (ids.length > show ? ` and ${ids.length - show} more` : ''));
   if (ignored) lines.push(ignored);
-  lines.push(...promiseLines(summary, (ids) => ids.slice(0, summary.show).join(', ')
-    + (ids.length > summary.show ? ` and ${ids.length - summary.show} more` : '')));
+  lines.push(...promiseLines(summary, (ids) => ids.slice(0, show).join(', ')
+    + (ids.length > show ? ` and ${ids.length - show} more` : '')));
   const rewrites = rewritesLine(run, summary);
   if (rewrites) lines.push(rewrites);
   lines.push(`RESULT: ${summary.gate.pass ? 'PASS' : 'FAIL'}`);
@@ -221,7 +257,9 @@ export function buildReport(run, summary) {
  * @param {import('../index.js').Summary} summary
  */
 export function formatMarkdown(run, summary) {
+  /** @param {(string | number)[]} cells */
   const row = (cells) => `| ${cells.join(' | ')} |`;
+  /** @param {string[]} list */
   const ids = (list) => (list.length ? list.map((id) => `\`${id}\``).join(', ') : 'none');
   const lines = [
     `### ${TOOL.name}: ${summary.gate.pass ? 'PASS' : 'FAIL'}`,
@@ -263,7 +301,9 @@ export function formatMarkdown(run, summary) {
  *   warnings: string[] }} result
  */
 export function formatComparison(result) {
+  /** @param {import('../index.js').Change} c */
   const line = (c) => printable(`  ${c.from.padEnd(11)} -> ${c.to.padEnd(11)} ${c.id}${c.severity ? `  [${c.severity}]` : ''}`);
+  /** @type {string[]} */
   const lines = [];
   for (const w of result.warnings) lines.push(`warning: ${printable(w)}`);
   if (result.regressions.length) lines.push('Regressions:', ...result.regressions.map(line));

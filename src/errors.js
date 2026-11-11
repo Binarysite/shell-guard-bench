@@ -15,3 +15,9 @@ export class SetupError extends Error {
     this.code = code;
   }
 }
+
+/**
+ * What went wrong reading a file, for a message that names it.
+ * @param {any} err a caught fs error
+ */
+export const fileProblem = (err) => (err?.code === 'ENOENT' ? 'file not found' : String(err?.message ?? err));
