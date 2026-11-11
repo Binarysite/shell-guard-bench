@@ -10,6 +10,7 @@ const hso = (fields) => JSON.stringify({ hookSpecificOutput: { hookEventName: 'P
 const DENY = hso({ permissionDecision: 'deny', permissionDecisionReason: 'no' });
 const ALLOW = hso({ permissionDecision: 'allow' });
 const INVALID = '{"hookSpecificOutput": nope}';
+const MIXED = 'decision JSON mixed with text; Claude Code ignores it';
 
 // [name, raw result, context, expected fields]. The first nine are the cells of the
 // contract table: stdout kind (valid JSON, invalid JSON, plain text) by exit code.
@@ -51,6 +52,23 @@ const ROWS = [
   ['timeout is a failure', raw(null, '', { timedOut: true, signal: 'SIGKILL' }), {},
     { outcome: 'failed', failure: 'timeout', contained: false }],
   ['a signal is a failure', raw(null, '', { signal: 'SIGSEGV' }), {}, { outcome: 'failed', failure: 'signal' }],
+  ['a signal is a failure even after valid JSON on stdout', raw(null, DENY, { signal: 'SIGTERM' }), {},
+    { outcome: 'failed', failure: 'signal', contained: false, reason: 'signal SIGTERM' }],
+  ['a signal after valid JSON is contained with onFailure block', raw(null, ALLOW, { signal: 'SIGKILL' }),
+    { onFailure: 'block' }, { outcome: 'failed', failure: 'signal', contained: true }],
+
+  ['text before a deny line: passthrough, with a warning', raw(0, `checking...\n${DENY}\n`), {},
+    { outcome: 'passthrough', contained: false, warning: MIXED }],
+  ['a deny line before text: passthrough, with a warning', raw(0, `${DENY}\nok`), {},
+    { outcome: 'passthrough', contained: false, warning: MIXED }],
+  ['a legacy decision line mixed with text: warning', raw(0, 'note\n{"decision":"block"}'), {},
+    { outcome: 'passthrough', warning: MIXED }],
+  ['mixed decision text on exit 1 is a failure, with the warning', raw(1, `oops\n${DENY}`), {},
+    { outcome: 'failed', failure: 'exit-code', warning: MIXED }],
+  ['mixed decision text on exit 2 is blocked, no warning', raw(2, `oops\n${DENY}`), {},
+    { outcome: 'blocked', warning: undefined }],
+  ['a JSON line without a decision field in text: no warning', raw(0, 'log\n{"x":1}'), {},
+    { outcome: 'passthrough', warning: undefined }],
 
   ['onFailure block: a failure is contained', raw(1, 'oops'), { onFailure: 'block' },
     { outcome: 'failed', contained: true, friction: true }],

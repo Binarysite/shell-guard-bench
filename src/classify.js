@@ -63,6 +63,24 @@ function tryParse(text) {
   }
 }
 
+/** Attached to a result whose stdout hides a decision among other text. */
+export const MIXED_WARNING = 'decision JSON mixed with text; Claude Code ignores it';
+
+/**
+ * True when stdout is plain text but one of its lines is a JSON object that sets
+ * hookSpecificOutput or decision: the hook meant to decide, and Claude Code will not
+ * read it. The contract is followed (it stays text); the result only carries a warning.
+ * @param {string} stdout
+ */
+function hidesDecision(stdout) {
+  return String(stdout ?? '').split('\n').some((line) => {
+    const t = line.trim();
+    if (!t.startsWith('{')) return false;
+    const v = tryParse(t);
+    return isObject(v) && ('hookSpecificOutput' in v || 'decision' in v);
+  });
+}
+
 /**
  * Claude Code parses stdout as JSON only when, trimmed, it starts with { and ends with }.
  * Two or more lines that each parse on their own are plain text, unless one of them is
@@ -159,14 +177,18 @@ export function classifyHookResult(raw, ctx) {
     return { outcome: 'blocked', contained: true, friction: true, ...(stderr ? { reason: stderr } : {}) };
   }
 
+  const warn = parsed.kind === 'text' && !raw.overflow && hidesDecision(raw.stdout) ? { warning: MIXED_WARNING } : {};
+  // A hook killed by a signal did not finish: whatever it printed is not a decision.
+  if (raw.signal) return { ...failed('signal', `signal ${raw.signal}${stderr ? `: ${stderr}` : ''}`), ...warn };
+
   if (raw.exitCode === 0) {
     if (parsed.kind === 'json') return decideFields(parsed.value, { command: ctx.command, acceptRewrites });
     if (parsed.kind === 'invalid') return failed('invalid-output', parsed.error);
-    return { outcome: 'passthrough', contained: false, friction: false };
+    return { outcome: 'passthrough', contained: false, friction: false, ...warn };
   }
 
-  const how = raw.signal ? `signal ${raw.signal}` : `exit ${raw.exitCode}`;
-  const failure = raw.signal ? 'signal' : 'exit-code';
+  const how = `exit ${raw.exitCode}`;
+  const failure = 'exit-code';
   if (parsed.kind === 'json') {
     // Valid JSON makes another exit code a success, unless onFailure is "block".
     if (blocksOnFailure) return failed(failure, `${how} with valid JSON; onFailure "block" treats it as a failure`);
@@ -174,5 +196,5 @@ export function classifyHookResult(raw, ctx) {
   }
   if (parsed.kind === 'invalid') return failed('invalid-output', `${how}, ${parsed.error}`);
   const hint = raw.exitCode === 127 ? ' (command not found?)' : '';
-  return failed(failure, `${how}${hint}${stderr ? `: ${stderr}` : ''}`);
+  return { ...failed(failure, `${how}${hint}${stderr ? `: ${stderr}` : ''}`), ...warn };
 }
