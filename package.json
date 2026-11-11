@@ -1,6 +1,6 @@
 {
   "name": "shell-guard-bench",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Bench for Claude Code PreToolUse guards: dangerous, evasive and harmless shell commands sent as data. The bench never executes a case; a hook that does is caught by a best-effort canary.",
   "type": "module",
   "private": true,

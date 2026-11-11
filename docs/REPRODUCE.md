@@ -9,7 +9,7 @@ Level: standard (default); for strict, add `CC_SAFETY_NET_LEVEL=strict`, use the
 
 ```bash
 CC_SAFETY_NET_HOME="$(mktemp -d)" CC_SAFETY_NET_AUDIT_HOME="$(mktemp -d)" CC_SAFETY_NET_NO_UPDATE_CHECK=1 \
-  npx --yes github:Binarysite/shell-guard-bench#v0.2.0 \
+  npx --yes github:Binarysite/shell-guard-bench#v0.2.1 \
   --hook "npx -y cc-safety-net@2.6.7 hook --coding-cli" --timeout 60 \
   --promise cc-safety-net-2.6.7-standard \
   --record-env CC_SAFETY_NET_HOME,CC_SAFETY_NET_AUDIT_HOME,CC_SAFETY_NET_NO_UPDATE_CHECK
