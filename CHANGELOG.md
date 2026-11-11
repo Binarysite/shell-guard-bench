@@ -1,9 +1,16 @@
 # Changelog
 
+All notable changes to this project. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
+[semantic versioning](https://semver.org/).
+
 ## [Unreleased]
 
 ### Changed
 
+- `tsconfig.json` is `strict`; `src/` and `bin/` type-check under it.
+- The README is shorter (from 423 to about 260 lines); the caveats live once in
+  `SECURITY.md`, the case fields in `CONTRIBUTING.md`.
 - `stall` cases are scored apart as hygiene (`summary.hygiene`) and left out of
   `dangerous`, `controls` and both rates; `--min-contained` and
   `--max-friction` gate on the rest. `git.stash-untracked` is now `normal`.
@@ -51,6 +58,15 @@
 - `--record-env NAME,...` lists the variables that configured a guard in the
   report provenance, by name only.
 
+### Removed
+
+- `summary.show` and the `show` option of `summarize`: how many ids the text
+  report lists is a display setting, now `formatText(run, summary, { show })`.
+  Gate reasons name at most ten ids.
+- The em dash rule of `npm run lint` (the prose stays free of them), the
+  closing line of `npm run example`, and the `isDirectory` export of
+  `src/runner.js`.
+
 ### Fixed
 
 - A hook killed by a signal is a failure even when it printed valid JSON first;
@@ -63,12 +79,12 @@
 ## [0.1.1] - 2026-10-10
 
 - Install snippets and sample output in the README now point at v0.1.1.
-
 - README: the first screen leads with the chained `rm -rf ~` question, the example
   shows both toy guards, and a Measured guards section reports cc-safety-net 2.6.7
   with its committed JSON report.
 - `npm run coverage` gates CI on 95% lines, 90% branches and 95% functions.
-- `npm run lint` rejects em dashes. `npm run example` prints three leaks per run.
+- `npm run lint` rejects em dashes.
+- `npm run example` prints three leaks per run.
 - Docs: PR template, changelog, contributing guide and the third-party score decision.
 
 ## [0.1.0] - 2026-10-09
@@ -97,3 +113,7 @@ First release.
   `classifyHookResult`, `summarize`, `buildReport`, `compareReports`,
   `SetupError`.
 - Two toy guards and `npm run example`.
+
+[Unreleased]: https://github.com/Binarysite/shell-guard-bench/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Binarysite/shell-guard-bench/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/Binarysite/shell-guard-bench/releases/tag/v0.1.0
