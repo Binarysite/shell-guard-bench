@@ -429,10 +429,7 @@ jobs:
 
 ## Related work
 
-Checked on 2026-10-09 against the GitHub API.
-
-- [waitdeadai/hookbench](https://github.com/waitdeadai/hookbench) (Python, Apache-2.0, 0 stars, last push
-  2026-06-01) measures recall and false-positive rate of Claude Code guard hooks on event payloads captured from
+- [waitdeadai/hookbench](https://github.com/waitdeadai/hookbench) (Python, Apache-2.0) measures recall and false-positive rate of Claude Code guard hooks on event payloads captured from
   real sessions, with a capture, label and score loop and a CI gate on both rates. That calibrates a guard on real
   traffic, which a fixed synthetic corpus cannot do. Its runner reads the verdict from the exit code (2 blocks,
   anything else allows). shell-guard-bench answers a different question: it emulates the full decision contract (JSON `deny`, `ask`,
