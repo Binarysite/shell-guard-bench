@@ -19,7 +19,9 @@ that triggered it. You should get an answer within a week.
   files are checked again after the last case; a hook caught then has already
   received every case, and the run is marked invalid.
 - A test runs the whole corpus with shims of `rm`, `git`, `psql` and other
-  dangerous programs first in PATH, and fails if any of them is invoked.
+  dangerous programs first in PATH, and HOME and TMPDIR pointing at a throwaway
+  directory, and fails if any shim is invoked or the fake home changes. Another
+  test checks that every process the bench starts is `/bin/sh -c <hook>`.
 - The hook runs in its own process group with a timeout and a hard deadline.
 - Reports keep the hook command and one line of at most 200 characters of the
   hook's stderr, reason and rewritten command, never the environment, the
