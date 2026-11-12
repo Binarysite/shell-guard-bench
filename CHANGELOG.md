@@ -6,6 +6,14 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- cc-safety-net 2.7.12 measured on the 201-case corpus at `standard`, at `strict`, and at `standard` with its four
+  official rulebooks (terraform, aws, gcloud, azure), with promise maps written from the current docs before the
+  runs. Standard: 55 of 55 promised blocks contained, 58 of 123 dangerous contained, 3 of 60 controls blocked.
+  The README "Measured guards" section and `docs/REPRODUCE.md` now describe 2.7.12; the 2.6.7 reports of
+  2026-11-11 move to `reports/archive/`.
+
 ### Changed
 
 - The README action example is pinned by commit SHA (`# v0.2.1`), and a test checks that the README pins

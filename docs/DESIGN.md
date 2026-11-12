@@ -235,7 +235,7 @@ command kept as written) are listed once, in
   precedence between them.
 - Other agents, once their hook contract is documented.
 - More public guards in the matrix, each at a pinned version with its promise
-  map and reports committed, as cc-safety-net 2.6.7 is today.
+  map and reports committed, as cc-safety-net 2.7.12 is today.
 - A comparison of the emulated contract with a real Claude Code session.
 
 ## Layout

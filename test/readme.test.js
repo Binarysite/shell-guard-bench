@@ -63,20 +63,26 @@ test('every corpus count written in the docs is the real one', async () => {
 test('the Measured guards tables are the committed cc-safety-net reports and promise maps', async () => {
   const readme = await readFile(join(root, 'README.md'), 'utf8');
   const json = async (file) => JSON.parse(await readFile(join(root, file), 'utf8'));
-  const levels = ['standard', 'strict'];
-  const reports = await Promise.all(levels.map((l) => json(`reports/cc-safety-net-2.6.7-2026-11-11-${l}.json`)));
-  const maps = await Promise.all(levels.map((l) => json(`promises/cc-safety-net-2.6.7-${l}.json`)));
+  const configs = ['standard', 'strict', 'rulebooks'];
+  const reports = await Promise.all(configs.map((c) => json(`reports/cc-safety-net-2.7.12-2026-11-12-${c}.json`)));
+  const maps = await Promise.all(configs.map((c) => json(`promises/cc-safety-net-2.7.12-${c}.json`)));
+  const { cases } = await loadCorpus();
   for (const r of reports) {
-    assert.equal(r.provenance.hook, 'npx -y cc-safety-net@2.6.7 hook --coding-cli');
+    assert.equal(r.provenance.hook, 'npx -y cc-safety-net@2.7.12 hook --coding-cli');
     assert.equal(r.provenance.isolate, true);
+    assert.equal(r.provenance.cases, cases.length, 'measured on the whole current corpus');
   }
   assert.ok(reports[1].provenance.recordedEnv.includes('CC_SAFETY_NET_LEVEL'));
-  assert.ok(!reports[0].provenance.recordedEnv.includes('CC_SAFETY_NET_LEVEL'), 'standard is the default level');
+  for (const i of [0, 2]) {
+    assert.ok(!reports[i].provenance.recordedEnv.includes('CC_SAFETY_NET_LEVEL'), 'standard is the default level');
+  }
+  assert.match(maps[2].guard, /official rulebooks/);
   const end = readme.indexOf('## How a result is read');
   assert.ok(end > -1, 'the section after Measured guards exists');
   const section = readme.slice(readme.indexOf('## Measured guards'), end);
+  assert.match(section, new RegExp(`measured on corpus v[\\d.]+ \\(${cases.length} cases\\)`, 'i'));
 
-  for (const [i, label] of ['standard (default)', 'strict'].entries()) {
+  for (const [i, label] of ['standard (default)', 'strict', 'standard + official rulebooks'].entries()) {
     const { summary: s } = reports[i];
     const p = s.promise;
     assert.equal(p.guard, maps[i].guard);
@@ -87,14 +93,15 @@ test('the Measured guards tables are the committed cc-safety-net reports and pro
     assert.ok(section.includes(row), `README lacks: ${row}`);
   }
 
-  const [std, strict] = reports;
+  const [std, strict, books] = reports;
   const expectOf = new Map(std.results.map((r) => [r.id, r.expect]));
   const catOf = new Map(std.results.map((r) => [r.id, r.category]));
   for (const [cat, c] of Object.entries(std.summary.byCategory)) {
     const t = strict.summary.byCategory[cat];
+    const b = books.summary.byCategory[cat];
     const promised = maps[0].blocks.filter((id) => catOf.get(id) === cat && expectOf.get(id) === 'block').length;
-    const row = `| ${cat} | ${c.dangerous} | ${promised} | ${c.contained} | ${t.contained} | ${c.controls} | ${c.friction} `
-      + `| ${t.friction} |`;
+    const row = `| ${cat} | ${c.dangerous} | ${promised} | ${c.contained} | ${t.contained} | ${b.contained} | ${c.controls} `
+      + `| ${c.friction} | ${t.friction} | ${b.friction} |`;
     assert.ok(section.includes(row), `README lacks: ${row}`);
   }
 });
